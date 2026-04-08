@@ -1,0 +1,19 @@
+<% if (pagination && pagination.totalPages > 1) { %>
+  <nav class="pagination">
+    <% const separator = baseQuery ? '&' : ''; %>
+
+    <% if (pagination.hasPrev) { %>
+      <a class="btn btn-secondary btn-sm" href="<%= basePath %>?<%= baseQuery %><%= separator %>page=<%= pagination.prevPage %>">Anterior</a>
+    <% } else { %>
+      <span class="btn btn-secondary btn-sm btn-disabled">Anterior</span>
+    <% } %>
+
+    <span class="pagination-info">Pagina <%= pagination.page %> de <%= pagination.totalPages %></span>
+
+    <% if (pagination.hasNext) { %>
+      <a class="btn btn-secondary btn-sm" href="<%= basePath %>?<%= baseQuery %><%= separator %>page=<%= pagination.nextPage %>">Siguiente</a>
+    <% } else { %>
+      <span class="btn btn-secondary btn-sm btn-disabled">Siguiente</span>
+    <% } %>
+  </nav>
+<% } %>

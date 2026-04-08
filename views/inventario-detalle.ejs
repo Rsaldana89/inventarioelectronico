@@ -1,0 +1,361 @@
+<%- include('partials/header', { title: title }) %>
+
+<section class="mobile-layout">
+  <section class="mobile-count-shell">
+    <div class="mobile-count-header">
+      <div>
+        <p class="mobile-eyebrow">Conteo móvil</p>
+        <h1>Inventario #<%= inventario.id %></h1>
+        <p class="muted small"><strong><%= inventario.sucursal_nombre %></strong> · <%= inventario.estado %> · <%= usesExistencias ? 'Con existencias' : 'Conteo libre' %></p>
+      </div>
+      <div class="mobile-header-actions">
+        <a class="btn btn-secondary btn-sm" href="/dashboard">Volver</a>
+      </div>
+    </div>
+
+    <section class="mobile-stats-grid">
+      <article class="card mobile-stat-card"><span class="stat-label">Capturados</span><strong class="stat-value"><%= capturaSummary.registros || 0 %></strong></article>
+      <article class="card mobile-stat-card"><span class="stat-label">Unidades</span><strong class="stat-value"><%= formatQty(capturaSummary.unidades || 0) %></strong></article>
+      <% if (usesExistencias) { %>
+        <article class="card mobile-stat-card"><span class="stat-label">Pendientes</span><strong class="stat-value"><%= blindSummary.pendientes || 0 %></strong></article>
+      <% } else { %>
+        <article class="card mobile-stat-card"><span class="stat-label">Modo</span><strong class="stat-value">Libre</strong></article>
+      <% } %>
+    </section>
+
+    <% if (inventario.estado === 'abierto') { %>
+      <section class="card mobile-capture-card">
+        <div class="mobile-step-banner">
+          <strong>3 pasos:</strong> escanea, captura cantidad y guarda.
+        </div>
+
+        <form action="/inventario/detalle" method="post" class="mobile-capture-form" id="mobileCaptureForm">
+          <input type="hidden" name="inventario_id" value="<%= inventario.id %>">
+          <input type="hidden" name="modo" value="sobrescribir">
+          <input type="hidden" name="return_search" id="mobileReturnSearch" value="<%= filters.search %>">
+          <input type="hidden" name="return_include_zero" value="<%= filters.includeZero ? '1' : '0' %>">
+
+          <label class="mobile-field mobile-scan-field">
+            <span>Código de barras o SKU</span>
+            <input type="text" name="barcode" id="mobileBarcode" placeholder="Escanea aquí" autocomplete="off" required data-autofocus>
+          </label>
+
+          <label class="mobile-field">
+            <span>Cantidad contada</span>
+            <input type="number" step="0.01" min="0" name="cantidad" id="mobileCantidad" value="1" required inputmode="decimal">
+          </label>
+
+          <div class="mobile-qty-actions">
+            <button type="button" class="btn btn-secondary mobile-qty-btn" data-qty-set="1">1</button>
+            <button type="button" class="btn btn-secondary mobile-qty-btn" data-qty-set="5">5</button>
+            <button type="button" class="btn btn-secondary mobile-qty-btn" data-qty-set="10">10</button>
+            <button type="button" class="btn btn-secondary mobile-qty-btn" data-qty-focus>Editar</button>
+          </div>
+
+          <button type="submit" class="btn btn-primary mobile-save-btn">Guardar y seguir</button>
+        </form>
+
+        <% if (usesExistencias) { %>
+          <p class="muted small mobile-tip">En móvil no se muestra la tabla completa. Solo se prioriza la captura rápida.</p>
+        <% } else { %>
+          <p class="muted small mobile-tip">Conteo libre: no se muestran existencias esperadas.</p>
+        <% } %>
+      </section>
+    <% } else { %>
+      <section class="card">
+        <p class="muted">Este inventario está cerrado. Solo puedes revisar y exportar.</p>
+      </section>
+    <% } %>
+
+    <% if (usesExistencias && filters.search && blindRows.length) { %>
+      <section class="card mobile-product-preview">
+        <h2>Producto encontrado</h2>
+        <% blindRows.slice(0, 3).forEach(function eachMobileBlind(item) { %>
+          <article class="mobile-preview-item">
+            <strong><%= item.descripcion || 'Sin descripción' %></strong>
+            <div class="mobile-preview-meta">
+              <span>SKU: <%= item.codigo || '-' %></span>
+              <span>Barcode: <%= item.barcode %></span>
+            </div>
+            <div class="mobile-preview-badges">
+              <span class="pill <%= item.estado === 'contado' ? 'pill-open' : 'pill-pending' %>"><%= item.estado %></span>
+              <span class="mobile-mini-stat">Existencia: <strong><%= formatQty(item.cantidad_esperada || 0) %></strong></span>
+              <span class="mobile-mini-stat">Contado: <strong><%= formatQty(item.cantidad_contada || 0) %></strong></span>
+            </div>
+          </article>
+        <% }) %>
+      </section>
+    <% } %>
+
+    <section class="card mobile-export-card">
+      <h2>Exportar</h2>
+      <form action="/export/<%= inventario.id %>" method="get" class="form-grid export-options-form mobile-export-form">
+        <label class="radio-option"><input type="radio" name="tipo" value="barcode" checked><span>Por código de barras</span></label>
+        <label class="radio-option"><input type="radio" name="tipo" value="sku"><span>Por SKU</span></label>
+        <button type="submit" class="btn btn-secondary">Exportar XLS</button>
+      </form>
+    </section>
+
+    <section class="card mobile-captured-card">
+      <h2>Registros capturados</h2>
+      <% if (!capturados.length) { %>
+        <p class="muted">Aún no hay registros capturados.</p>
+      <% } else { %>
+        <div class="mobile-captured-list">
+          <% capturados.slice(0, 12).forEach(function eachMobileCapture(item) { %>
+            <article class="mobile-captured-item">
+              <div>
+                <strong><%= item.descripcion || '-' %></strong>
+                <p class="muted small">SKU: <%= item.codigo || '-' %> · Barcode: <%= item.barcode %></p>
+              </div>
+              <span class="mobile-captured-qty"><%= formatQty(item.cantidad) %></span>
+            </article>
+          <% }) %>
+        </div>
+      <% } %>
+    </section>
+  </section>
+</section>
+
+<section class="desktop-layout">
+  <section class="page-header">
+    <div>
+      <h1>Inventario #<%= inventario.id %></h1>
+      <p class="muted">
+        <strong>Sucursal:</strong> <%= inventario.sucursal_nombre %> |
+        <strong>Fecha:</strong> <%= formatDate(inventario.fecha) %> |
+        <strong>Base:</strong> <%= usesExistencias ? 'Existencia ' + formatDate(inventario.fecha_existencia) : 'Sin existencias' %> |
+        <strong>Estado:</strong>
+        <span class="pill <%= inventario.estado === 'abierto' ? 'pill-open' : 'pill-closed' %>"><%= inventario.estado %></span>
+      </p>
+    </div>
+
+    <div class="page-header-actions">
+      <a class="btn btn-secondary" href="/dashboard">Volver</a>
+      <% if (inventario.estado === 'abierto') { %>
+        <form action="/inventarios/<%= inventario.id %>/cerrar" method="post" data-confirm="Se cerrara el inventario y ya no podras editarlo.">
+          <button type="submit" class="btn btn-danger">Cerrar inventario</button>
+        </form>
+      <% } %>
+    </div>
+  </section>
+
+  <section class="cards-grid">
+    <article class="card stat-card"><span class="stat-label">Registros capturados</span><strong class="stat-value"><%= capturaSummary.registros || 0 %></strong></article>
+    <article class="card stat-card"><span class="stat-label">Unidades capturadas</span><strong class="stat-value"><%= formatQty(capturaSummary.unidades || 0) %></strong></article>
+    <% if (usesExistencias) { %>
+      <article class="card stat-card"><span class="stat-label">Esperados</span><strong class="stat-value"><%= blindSummary.total_esperados || 0 %></strong></article>
+      <article class="card stat-card"><span class="stat-label">Contados</span><strong class="stat-value"><%= blindSummary.contados || 0 %></strong></article>
+      <article class="card stat-card"><span class="stat-label">Pendientes</span><strong class="stat-value"><%= blindSummary.pendientes || 0 %></strong></article>
+    <% } else { %>
+      <article class="card stat-card"><span class="stat-label">Modo</span><strong class="stat-value">Libre</strong></article>
+      <article class="card stat-card"><span class="stat-label">Base</span><strong class="stat-value">Sin existencias</strong></article>
+      <article class="card stat-card"><span class="stat-label">Captura</span><strong class="stat-value">Manual</strong></article>
+    <% } %>
+  </section>
+
+  <% if (usesExistencias) { %>
+    <section class="cards-grid compact-summary-grid">
+      <article class="card stat-card"><span class="stat-label">Con existencia</span><strong class="stat-value"><%= blindSummary.con_existencia_distinta_cero || 0 %></strong></article>
+      <article class="card stat-card"><span class="stat-label">Con existencia 0</span><strong class="stat-value"><%= blindSummary.con_existencia_cero || 0 %></strong></article>
+      <article class="card stat-card"><span class="stat-label">Visibles con filtro</span><strong class="stat-value"><%= pagination.total || 0 %></strong></article>
+    </section>
+  <% } %>
+
+  <% if (inventario.estado === 'abierto') { %>
+    <section class="card store-mode-card">
+      <div class="section-title">
+        <div>
+          <h2><%= usesExistencias ? 'Modo ultra simple para tienda' : 'Captura simple para tienda' %></h2>
+          <% if (usesExistencias) { %>
+            <p class="muted small">Escanea el barcode, presiona Enter, captura la cantidad y vuelve a presionar Enter. El cursor regresa al campo de escaneo para el siguiente producto.</p>
+          <% } else { %>
+            <p class="muted small">Este inventario no usa existencias cargadas. Solo escanea o escribe el barcode o SKU, captura la cantidad contada y guarda. No se muestran existencias esperadas.</p>
+          <% } %>
+        </div>
+      </div>
+
+      <form action="/inventario/detalle" method="post" class="store-capture-form" id="storeCaptureForm">
+        <input type="hidden" name="inventario_id" value="<%= inventario.id %>">
+        <input type="hidden" name="modo" value="sobrescribir">
+        <input type="hidden" name="return_search" id="storeReturnSearch" value="<%= filters.search %>">
+        <input type="hidden" name="return_include_zero" value="<%= filters.includeZero ? '1' : '0' %>">
+
+        <label class="store-field">
+          <span>Barcode o SKU</span>
+          <input type="text" name="barcode" id="storeBarcode" placeholder="Escanea aquí" autocomplete="off" required>
+        </label>
+
+        <label class="store-field store-qty">
+          <span>Cantidad contada</span>
+          <input type="number" step="0.01" min="0" name="cantidad" id="storeCantidad" value="1" required>
+        </label>
+
+        <button type="submit" class="btn btn-primary store-submit">Guardar y seguir</button>
+      </form>
+    </section>
+
+    <section class="two-column">
+      <article class="card">
+        <h2>Captura manual detallada</h2>
+        <form action="/inventario/detalle" method="post" class="form-grid compact-grid">
+          <input type="hidden" name="inventario_id" value="<%= inventario.id %>">
+          <input type="hidden" name="return_search" value="<%= filters.search %>">
+          <input type="hidden" name="return_include_zero" value="<%= filters.includeZero ? '1' : '0' %>">
+          <label>
+            Barcode o codigo
+            <input type="text" name="barcode" placeholder="Escanea o escribe el codigo" required>
+          </label>
+          <label>
+            Cantidad
+            <input type="number" step="0.01" min="0" name="cantidad" value="1" required>
+          </label>
+          <label>
+            Modo
+            <select name="modo">
+              <option value="sumar">Sumar</option>
+              <option value="sobrescribir">Sobrescribir</option>
+            </select>
+          </label>
+          <button type="submit" class="btn btn-secondary">Guardar registro</button>
+        </form>
+      </article>
+
+      <article class="card">
+        <h2>Exportar conteo</h2>
+        <form action="/export/<%= inventario.id %>" method="get" class="form-grid compact-grid export-options-form">
+          <label class="radio-option"><input type="radio" name="tipo" value="barcode" checked><span>Por código de barras</span></label>
+          <label class="radio-option"><input type="radio" name="tipo" value="sku"><span>Por SKU</span></label>
+          <button type="submit" class="btn btn-secondary">Exportar XLS</button>
+        </form>
+        <p class="muted small">Por default sale por código de barras. La exportación incluye identificador y cantidad contada.</p>
+      </article>
+    </section>
+  <% } else { %>
+    <section class="card">
+      <h2>Exportar conteo</h2>
+      <form action="/export/<%= inventario.id %>" method="get" class="form-grid compact-grid export-options-form">
+        <label class="radio-option"><input type="radio" name="tipo" value="barcode" checked><span>Por código de barras</span></label>
+        <label class="radio-option"><input type="radio" name="tipo" value="sku"><span>Por SKU</span></label>
+        <button type="submit" class="btn btn-secondary">Exportar XLS</button>
+      </form>
+      <p class="muted small">Por default sale por código de barras. La exportación incluye identificador y cantidad contada.</p>
+    </section>
+  <% } %>
+
+  <% if (usesExistencias) { %>
+    <section class="card">
+      <div class="section-title">
+        <div>
+          <h2>Conteo ciego basado en existencias</h2>
+          <p class="muted small">Desmarcada la casilla solo ves productos con existencia distinta de 0. Marcada la casilla también se muestran los que tienen existencia 0.</p>
+          <p class="muted small">Totales: <strong><%= blindSummary.total_esperados || 0 %></strong> artículos; con existencia: <strong><%= blindSummary.con_existencia_distinta_cero || 0 %></strong>; con existencia 0: <strong><%= blindSummary.con_existencia_cero || 0 %></strong>; visibles con el filtro actual: <strong><%= pagination.total || 0 %></strong>.</p>
+        </div>
+
+        <form method="get" action="/inventarios/<%= inventario.id %>" class="inline-search">
+          <input type="text" name="search" value="<%= filters.search %>" placeholder="Buscar barcode, codigo o descripcion">
+          <% if (hasLoadedExistencias) { %>
+            <label class="checkbox-inline">
+              <input type="checkbox" name="include_zero" value="1" <%= filters.includeZero ? 'checked' : '' %>>
+              Incluir artículos con existencia 0
+            </label>
+          <% } %>
+          <button type="submit" class="btn btn-secondary btn-sm">Buscar</button>
+        </form>
+      </div>
+
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Codigo</th>
+              <th>Barcode</th>
+              <th>Descripcion</th>
+              <th>Estatus</th>
+              <th>Existencia</th>
+              <th>Cantidad capturada</th>
+              <% if (inventario.estado === 'abierto') { %><th>Captura rápida</th><% } %>
+            </tr>
+          </thead>
+          <tbody>
+            <% if (!blindRows.length) { %>
+              <tr><td colspan="<%= inventario.estado === 'abierto' ? 7 : 6 %>" class="empty-cell">No hay productos esperados para mostrar con el filtro actual.</td></tr>
+            <% } %>
+            <% blindRows.forEach(function eachBlindRow(item) { %>
+              <tr>
+                <td><%= item.codigo || '-' %></td>
+                <td><%= item.barcode %></td>
+                <td><%= item.descripcion || '-' %></td>
+                <td><span class="pill <%= item.estado === 'contado' ? 'pill-open' : 'pill-pending' %>"><%= item.estado %></span></td>
+                <td><%= formatQty(item.cantidad_esperada || 0) %></td>
+                <td><%= formatQty(item.cantidad_contada) %></td>
+                <% if (inventario.estado === 'abierto') { %>
+                  <td>
+                    <form action="/inventario/detalle" method="post" class="inline-form actions-row">
+                      <input type="hidden" name="inventario_id" value="<%= inventario.id %>">
+                      <input type="hidden" name="barcode" value="<%= item.barcode %>">
+                      <input type="hidden" name="modo" value="sobrescribir">
+                      <input type="hidden" name="return_search" value="<%= filters.search %>">
+                      <input type="hidden" name="return_include_zero" value="<%= filters.includeZero ? '1' : '0' %>">
+                      <input type="number" step="0.01" min="0" name="cantidad" value="<%= item.cantidad_contada && Number(item.cantidad_contada) > 0 ? item.cantidad_contada : '' %>" placeholder="Cant." required style="width: 90px;">
+                      <button type="submit" class="btn btn-primary btn-sm">Guardar</button>
+                    </form>
+                  </td>
+                <% } %>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+
+      <%- include('partials/pagination', { pagination: pagination, basePath: '/inventarios/' + inventario.id, baseQuery: baseQuery }) %>
+    </section>
+  <% } %>
+
+  <section class="card">
+    <h2>Registros capturados</h2>
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Codigo</th>
+            <th>Barcode</th>
+            <th>Descripcion</th>
+            <th>Cantidad</th>
+            <% if (inventario.estado === 'abierto') { %><th>Acciones</th><% } %>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (!capturados.length) { %>
+            <tr><td colspan="<%= inventario.estado === 'abierto' ? 5 : 4 %>" class="empty-cell">Aun no hay registros capturados.</td></tr>
+          <% } %>
+          <% capturados.forEach(function eachCapturado(item) { %>
+            <tr>
+              <td><%= item.codigo || '-' %></td>
+              <td><%= item.barcode %></td>
+              <td><%= item.descripcion || '-' %></td>
+              <td><%= formatQty(item.cantidad) %></td>
+              <% if (inventario.estado === 'abierto') { %>
+                <td>
+                  <div class="actions-row">
+                    <form action="/inventario/detalle/<%= item.id %>/update" method="post" class="inline-form">
+                      <input type="hidden" name="inventario_id" value="<%= inventario.id %>">
+                      <input type="number" step="0.01" min="0" name="cantidad" value="<%= item.cantidad %>" required>
+                      <button type="submit" class="btn btn-secondary btn-sm">Actualizar</button>
+                    </form>
+                    <form action="/inventario/detalle/<%= item.id %>/delete" method="post" data-confirm="Se eliminara este registro.">
+                      <input type="hidden" name="inventario_id" value="<%= inventario.id %>">
+                      <button type="submit" class="btn btn-danger btn-sm">Eliminar</button>
+                    </form>
+                  </div>
+                </td>
+              <% } %>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</section>
+
+<%- include('partials/footer') %>

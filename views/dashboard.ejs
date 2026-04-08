@@ -1,0 +1,111 @@
+<%- include('partials/header', { title: title }) %>
+
+<section class="page-header">
+  <div>
+    <h1>Dashboard</h1>
+    <p class="muted">Consulta inventarios, filtra por fecha y crea nuevos inventarios.</p>
+  </div>
+  <a class="btn btn-secondary" href="/existencias">Ir a existencias</a>
+</section>
+
+<section class="cards-grid">
+  <article class="card stat-card"><span class="stat-label">Total</span><strong class="stat-value"><%= summary.total || 0 %></strong></article>
+  <article class="card stat-card"><span class="stat-label">Abiertos</span><strong class="stat-value"><%= summary.abiertos || 0 %></strong></article>
+  <article class="card stat-card"><span class="stat-label">Cerrados</span><strong class="stat-value"><%= summary.cerrados || 0 %></strong></article>
+</section>
+
+<section class="two-column">
+  <article class="card">
+    <h2>Filtrar inventarios</h2>
+    <form method="get" action="/dashboard" class="form-grid compact-grid">
+      <% if (currentUser.rol === 'admin') { %>
+        <label>
+          Sucursal
+          <select name="sucursal_id" onchange="this.form.submit()">
+            <option value="">Todas</option>
+            <% sucursales.forEach(function eachSucursal(sucursal) { %>
+              <option value="<%= sucursal.id %>" <%= String(filters.sucursalId || '') === String(sucursal.id) ? 'selected' : '' %>><%= sucursal.nombre %></option>
+            <% }) %>
+          </select>
+        </label>
+      <% } %>
+      <label>Fecha inicial<input type="date" name="fecha_inicio" value="<%= filters.fechaInicio %>"></label>
+      <label>Fecha final<input type="date" name="fecha_fin" value="<%= filters.fechaFin %>"></label>
+      <button type="submit" class="btn btn-secondary">Aplicar filtro</button>
+    </form>
+  </article>
+
+  <article class="card">
+    <h2>Crear inventario</h2>
+    <form method="post" action="/inventarios" class="form-grid compact-grid">
+      <% if (currentUser.rol === 'admin') { %>
+        <label>
+          Sucursal
+          <select name="sucursal_id" required>
+            <% sucursales.forEach(function eachSucursal(sucursal) { %>
+              <option value="<%= sucursal.id %>" <%= String(filters.sucursalId || '') === String(sucursal.id) ? 'selected' : '' %>><%= sucursal.nombre %></option>
+            <% }) %>
+          </select>
+        </label>
+      <% } %>
+
+      <label>
+        Fecha
+        <input type="date" name="fecha" value="<%= new Date().toISOString().slice(0, 10) %>" required>
+      </label>
+
+      <label>
+        Base del inventario
+        <select name="origen_existencias" id="origen_existencias">
+          <option value="sin_existencias">Iniciar sin basarme en existencias</option>
+          <option value="con_existencia">Basarme en una existencia cargada</option>
+        </select>
+      </label>
+
+      <label>
+        Fecha de existencia
+        <select name="existencia_carga_id" id="existencia_carga_id">
+          <option value="">Selecciona una fecha</option>
+          <% (cargasExistencia || []).forEach(function(carga) { %>
+            <option value="<%= carga.id %>">#<%= carga.id %> | Existencia <%= formatDate(carga.fecha_existencia) %> | Cargado <%= formatDateTime(carga.created_at) %></option>
+          <% }) %>
+        </select>
+      </label>
+
+      <button type="submit" class="btn btn-primary">Crear inventario</button>
+    </form>
+    <p class="muted small">La lista de fechas depende de la sucursal seleccionada. Primero carga existencias desde el módulo de existencias.</p>
+  </article>
+</section>
+
+<section class="card">
+  <h2>Inventarios</h2>
+  <div class="table-responsive">
+    <table class="data-table">
+      <thead>
+        <tr><th>ID</th><th>Fecha</th><th>Sucursal</th><th>Base</th><th>Estado</th><th>Registros</th><th>Unidades</th><th>Acciones</th></tr>
+      </thead>
+      <tbody>
+        <% if (!inventarios.length) { %>
+          <tr><td colspan="8" class="empty-cell">No hay inventarios con los filtros seleccionados.</td></tr>
+        <% } %>
+        <% inventarios.forEach(function eachInventario(inventario) { %>
+          <tr>
+            <td>#<%= inventario.id %></td>
+            <td><%= formatDate(inventario.fecha) %></td>
+            <td><%= inventario.sucursal_nombre %></td>
+            <td>
+              <%= ['con_existencia', 'con_existencias'].includes(inventario.origen_existencias) ? 'Existencia ' + formatDate(inventario.fecha_existencia) : 'Sin existencias' %>
+            </td>
+            <td><span class="pill <%= inventario.estado === 'abierto' ? 'pill-open' : 'pill-closed' %>"><%= inventario.estado %></span></td>
+            <td><%= inventario.registros_capturados %></td>
+            <td><%= formatQty(inventario.unidades_capturadas) %></td>
+            <td><a class="btn btn-secondary btn-sm" href="/inventarios/<%= inventario.id %>">Abrir</a></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<%- include('partials/footer') %>
