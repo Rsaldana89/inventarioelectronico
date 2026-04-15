@@ -21,7 +21,7 @@ async function showDashboard(req, res, next) {
     ]);
 
     return res.render('dashboard', {
-      title: 'Dashboard',
+      title: 'Inicio',
       inventarios,
       summary,
       filters,

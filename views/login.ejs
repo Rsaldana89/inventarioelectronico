@@ -1,28 +1,43 @@
 <%- include('partials/header', { title: title }) %>
 
-<section class="login-wrapper">
-  <div class="card login-card">
-    <h1>Iniciar sesion</h1>
-    <p class="muted">Acceso simple con usuario y contrasena.</p>
+<section class="login-shell">
+  <div class="login-intro minimal-login-intro">
+    <h1>Inventario Electronico</h1>
+    <div class="login-feature-list single-feature-list">
+      <div class="login-feature-item">
+        <span class="login-feature-icon">🏪</span>
+        <div>
+          <strong>Flujo para tienda</strong>
+          <small>Entrar, crear inventario, escanear y exportar Excel.</small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card login-card modern-login-card compact-login-card">
+    <div class="login-card-header compact-login-header">
+      <div class="login-icon-circle">🔐</div>
+      <div>
+        <h2>Iniciar sesión</h2>
+      </div>
+    </div>
 
     <form action="/login" method="post" class="form-grid">
       <label>
         Usuario
-        <input type="text" name="username" placeholder="admin" required autofocus data-autofocus>
+        <input type="text" name="username" placeholder="Usuario" required autofocus data-autofocus>
       </label>
 
       <label>
-        Contrasena
-        <input type="password" name="password" placeholder="********" required>
+        Contraseña
+        <input type="password" name="password" placeholder="Contraseña" required>
       </label>
 
-      <button type="submit" class="btn btn-primary">Entrar</button>
+      <button type="submit" class="btn btn-primary btn-lg">
+        <span class="btn-icon">→</span>
+        <span>Entrar</span>
+      </button>
     </form>
-
-    <div class="hint">
-      <strong>Credenciales iniciales:</strong><br>
-      admin / admin123
-    </div>
   </div>
 </section>
 

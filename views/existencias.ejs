@@ -1,15 +1,22 @@
 <%- include('partials/header', { title: title }) %>
 
-<section class="page-header">
+<section class="page-header page-header-stock">
   <div>
+    <span class="section-kicker section-kicker-stock">Existencias</span>
     <h1>Existencias</h1>
-    <p class="muted">Solo se manejan SKU numericos entre 1100000 y 2200000. Cada carga de existencias se guarda por sucursal y fecha.</p>
+    <p class="muted">Carga, consulta y administra existencias por sucursal y fecha de corte.</p>
   </div>
 </section>
 
 <section class="two-column">
-  <article class="card">
-    <h2>Seleccion de sucursal</h2>
+  <article class="card section-card section-card-stock">
+    <div class="card-heading">
+      <div>
+        <span class="section-kicker">Paso 1</span>
+        <h2>Seleccionar sucursal</h2>
+      </div>
+      <span class="heading-icon stock-icon">⌂</span>
+    </div>
 
     <form method="get" action="/existencias" class="form-grid compact-grid">
       <label>
@@ -23,15 +30,21 @@
 
       <label>
         Buscar
-        <input type="text" name="search" value="<%= filters.search %>" placeholder="Barcode, codigo o descripcion">
+        <input type="text" name="search" value="<%= filters.search %>" placeholder="Barcode, código o descripción">
       </label>
 
-      <button type="submit" class="btn btn-secondary">Consultar</button>
+      <button type="submit" class="btn btn-secondary btn-stock"><span class="btn-icon">⌕</span><span>Consultar</span></button>
     </form>
   </article>
 
-  <article class="card">
-    <h2>Importar existencias</h2>
+  <article class="card section-card section-card-stock">
+    <div class="card-heading">
+      <div>
+        <span class="section-kicker">Paso 2</span>
+        <h2>Importar existencias</h2>
+      </div>
+      <span class="heading-icon stock-icon">⇪</span>
+    </div>
 
     <form method="post" action="/upload-existencias" enctype="multipart/form-data" class="form-grid compact-grid">
       <input type="hidden" name="sucursal_id" value="<%= selectedSucursalId || '' %>">
@@ -46,7 +59,7 @@
         <input type="file" name="archivo" accept=".xls,.xlsx,.csv" required>
       </label>
 
-      <button type="submit" class="btn btn-primary">Cargar existencias</button>
+      <button type="submit" class="btn btn-primary btn-stock-primary"><span class="btn-icon">⇪</span><span>Cargar existencias</span></button>
     </form>
 
     <p class="muted small">La carga actualiza la existencia visible de la sucursal y además guarda el corte con su fecha para poder iniciar inventarios basados en esa fecha.</p>
@@ -54,8 +67,14 @@
 </section>
 
 <% if (currentUser.rol === 'admin') { %>
-  <section class="card">
-    <h2>Actualizar catalogo de productos</h2>
+  <section class="card section-card section-card-stock">
+    <div class="card-heading">
+      <div>
+        <span class="section-kicker">Administración</span>
+        <h2>Actualizar catálogo de productos</h2>
+      </div>
+      <span class="heading-icon stock-icon">⚙</span>
+    </div>
 
     <form method="post" action="/upload-productos" enctype="multipart/form-data" class="form-grid compact-grid">
       <label>
@@ -63,14 +82,14 @@
         <input type="file" name="archivo" accept=".txt,.xls,.xlsx,.csv" required>
       </label>
 
-      <button type="submit" class="btn btn-secondary">Cargar catalogo</button>
+      <button type="submit" class="btn btn-secondary btn-stock"><span class="btn-icon">⇪</span><span>Cargar catálogo</span></button>
     </form>
 
     <form method="post" action="/delete-productos" data-confirm="Se eliminara todo el catalogo actual.">
-      <button type="submit" class="btn btn-danger">Borrar catalogo actual</button>
+      <button type="submit" class="btn btn-danger"><span class="btn-icon">✕</span><span>Borrar catálogo actual</span></button>
     </form>
 
-    <p class="muted small">Solo se conservan SKU numericos dentro del rango 1100000 a 2200000.</p>
+    <p class="muted small">Solo se conservan SKU numéricos dentro del rango 1100000 a 2200000.</p>
 
     <% if (catalogUpdatedAt) { %>
       <p class="muted small">Última actualización: <%= formatDate(catalogUpdatedAt) %></p>
@@ -81,14 +100,20 @@
 <% } %>
 
 <section class="cards-grid">
-  <article class="card stat-card"><span class="stat-label">Sucursal activa</span><strong class="stat-value"><%= sucursalActual ? sucursalActual.nombre : 'Sin seleccionar' %></strong></article>
-  <article class="card stat-card"><span class="stat-label">Items cargados</span><strong class="stat-value"><%= summary.items || 0 %></strong></article>
-  <article class="card stat-card"><span class="stat-label">Unidades totales</span><strong class="stat-value"><%= formatQty(summary.unidades || 0) %></strong></article>
-  <article class="card stat-card"><span class="stat-label">Catalogo</span><strong class="stat-value"><%= productCount || 0 %></strong></article>
+  <article class="card stat-card stat-card-stock"><span class="stat-label">Sucursal activa</span><strong class="stat-value"><%= sucursalActual ? sucursalActual.nombre : 'Sin seleccionar' %></strong></article>
+  <article class="card stat-card stat-card-stock"><span class="stat-label">Items cargados</span><strong class="stat-value"><%= summary.items || 0 %></strong></article>
+  <article class="card stat-card stat-card-stock"><span class="stat-label">Unidades totales</span><strong class="stat-value"><%= formatQty(summary.unidades || 0) %></strong></article>
+  <article class="card stat-card stat-card-stock"><span class="stat-label">Catálogo</span><strong class="stat-value"><%= productCount || 0 %></strong></article>
 </section>
 
-<section class="card">
-  <h2>Fechas de existencias cargadas</h2>
+<section class="card section-card section-card-stock">
+  <div class="card-heading">
+    <div>
+      <span class="section-kicker">Historial</span>
+      <h2>Fechas de existencias cargadas</h2>
+    </div>
+    <span class="heading-icon stock-icon">◷</span>
+  </div>
   <div class="table-responsive">
     <table class="data-table">
       <thead><tr><th>ID corte</th><th>Fecha de existencia</th><th>Fecha y hora de carga</th></tr></thead>
@@ -108,11 +133,17 @@
   </div>
 </section>
 
-<section class="card">
-  <h2>Detalle de existencias</h2>
+<section class="card section-card section-card-stock">
+  <div class="card-heading">
+    <div>
+      <span class="section-kicker">Consulta</span>
+      <h2>Detalle de existencias</h2>
+    </div>
+    <span class="heading-icon stock-icon">☰</span>
+  </div>
   <div class="table-responsive">
     <table class="data-table">
-      <thead><tr><th>Codigo</th><th>Barcode</th><th>Descripcion</th><th>Cantidad</th></tr></thead>
+      <thead><tr><th>Código</th><th>Barcode</th><th>Descripción</th><th>Cantidad</th></tr></thead>
       <tbody>
         <% if (!existencias.length) { %>
           <tr><td colspan="4" class="empty-cell">No hay existencias para mostrar. Importa un archivo para la sucursal seleccionada.</td></tr>

@@ -25,38 +25,45 @@
 
     <% if (inventario.estado === 'abierto') { %>
       <section class="card mobile-capture-card">
-        <div class="mobile-step-banner">
-          <strong>3 pasos:</strong> escanea, captura cantidad y guarda.
+        <div class="mobile-step-banner" data-step-banner>
+          <strong>Modo manual:</strong> escanea, captura cantidad y guarda.
         </div>
 
-        <form action="/inventario/detalle" method="post" class="mobile-capture-form" id="mobileCaptureForm">
+        <form action="/inventario/detalle" method="post" class="mobile-capture-form" id="mobileCaptureForm" data-capture-mode-form>
           <input type="hidden" name="inventario_id" value="<%= inventario.id %>">
-          <input type="hidden" name="modo" value="sobrescribir">
+          <input type="hidden" name="modo" value="sobrescribir" id="mobileModo" data-capture-submit-mode>
           <input type="hidden" name="return_search" id="mobileReturnSearch" value="<%= filters.search %>">
           <input type="hidden" name="return_include_zero" value="<%= filters.includeZero ? '1' : '0' %>">
+
+          <div class="capture-mode-switch" data-capture-mode-group>
+            <button type="button" class="capture-mode-btn is-active" data-capture-mode="manual">Captura manual</button>
+            <button type="button" class="capture-mode-btn" data-capture-mode="continuo">Escaneo continuo</button>
+          </div>
+
+          <p class="capture-mode-help muted small" data-capture-help>Escanea, captura cantidad y guarda.</p>
 
           <label class="mobile-field mobile-scan-field">
             <span>Código de barras o SKU</span>
             <input type="text" name="barcode" id="mobileBarcode" placeholder="Escanea aquí" autocomplete="off" required data-autofocus>
           </label>
 
-          <label class="mobile-field">
+          <label class="mobile-field" data-qty-wrapper>
             <span>Cantidad contada</span>
             <input type="number" step="0.01" min="0" name="cantidad" id="mobileCantidad" value="1" required inputmode="decimal">
           </label>
 
-          <div class="mobile-qty-actions">
+          <div class="mobile-qty-actions" data-qty-actions>
             <button type="button" class="btn btn-secondary mobile-qty-btn" data-qty-set="1">1</button>
             <button type="button" class="btn btn-secondary mobile-qty-btn" data-qty-set="5">5</button>
             <button type="button" class="btn btn-secondary mobile-qty-btn" data-qty-set="10">10</button>
             <button type="button" class="btn btn-secondary mobile-qty-btn" data-qty-focus>Editar</button>
           </div>
 
-          <button type="submit" class="btn btn-primary mobile-save-btn">Guardar y seguir</button>
+          <button type="submit" class="btn btn-primary mobile-save-btn" data-capture-submit-label>Guardar registro</button>
         </form>
 
         <% if (usesExistencias) { %>
-          <p class="muted small mobile-tip">En móvil no se muestra la tabla completa. Solo se prioriza la captura rápida.</p>
+          <p class="muted small mobile-tip">En móvil se prioriza la captura rápida.</p>
         <% } else { %>
           <p class="muted small mobile-tip">Conteo libre: no se muestran existencias esperadas.</p>
         <% } %>
@@ -166,32 +173,38 @@
     <section class="card store-mode-card">
       <div class="section-title">
         <div>
-          <h2><%= usesExistencias ? 'Modo ultra simple para tienda' : 'Captura simple para tienda' %></h2>
-          <% if (usesExistencias) { %>
-            <p class="muted small">Escanea el barcode, presiona Enter, captura la cantidad y vuelve a presionar Enter. El cursor regresa al campo de escaneo para el siguiente producto.</p>
-          <% } else { %>
-            <p class="muted small">Este inventario no usa existencias cargadas. Solo escanea o escribe el barcode o SKU, captura la cantidad contada y guarda. No se muestran existencias esperadas.</p>
-          <% } %>
+          <h2><%= usesExistencias ? 'Conteo rápido para tienda' : 'Captura simple para tienda' %></h2>
+          <p class="muted small" data-capture-help>Escanea, captura cantidad y guarda.</p>
         </div>
       </div>
 
-      <form action="/inventario/detalle" method="post" class="store-capture-form" id="storeCaptureForm">
+      <form action="/inventario/detalle" method="post" class="store-capture-form" id="storeCaptureForm" data-capture-mode-form>
         <input type="hidden" name="inventario_id" value="<%= inventario.id %>">
-        <input type="hidden" name="modo" value="sobrescribir">
+        <input type="hidden" name="modo" value="sobrescribir" id="storeModo" data-capture-submit-mode>
         <input type="hidden" name="return_search" id="storeReturnSearch" value="<%= filters.search %>">
         <input type="hidden" name="return_include_zero" value="<%= filters.includeZero ? '1' : '0' %>">
+
+        <div class="store-mode-toolbar">
+          <div class="capture-mode-switch" data-capture-mode-group>
+            <button type="button" class="capture-mode-btn is-active" data-capture-mode="manual">Captura manual</button>
+            <button type="button" class="capture-mode-btn" data-capture-mode="continuo">Escaneo continuo</button>
+          </div>
+          <div class="capture-mode-banner" data-step-banner>
+            <strong>Manual:</strong> puedes indicar cantidad antes de guardar.
+          </div>
+        </div>
 
         <label class="store-field">
           <span>Barcode o SKU</span>
           <input type="text" name="barcode" id="storeBarcode" placeholder="Escanea aquí" autocomplete="off" required>
         </label>
 
-        <label class="store-field store-qty">
+        <label class="store-field store-qty" data-qty-wrapper>
           <span>Cantidad contada</span>
           <input type="number" step="0.01" min="0" name="cantidad" id="storeCantidad" value="1" required>
         </label>
 
-        <button type="submit" class="btn btn-primary store-submit">Guardar y seguir</button>
+        <button type="submit" class="btn btn-primary store-submit" data-capture-submit-label>Guardar registro</button>
       </form>
     </section>
 

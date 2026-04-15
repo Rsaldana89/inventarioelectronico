@@ -3,18 +3,42 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title><%= title || 'Inventario Retail One' %></title>
+  <title><%= title || 'Inventario Electronico' %></title>
   <link rel="stylesheet" href="/css/styles.css">
 </head>
-<body>
+<body class="<%= currentPath === '/login' ? 'login-page' : 'app-page' %>">
   <header class="topbar">
     <div class="container topbar-inner">
-      <a href="/dashboard" class="brand">Inventario Retail One</a>
+      <a href="/dashboard" class="brand">
+        <span class="brand-mark">▣</span>
+        <span>Inventario Electronico</span>
+      </a>
 
-      <% if (currentUser) { %>
-        <nav class="nav">
-          <a class="<%= currentPath === '/dashboard' || currentPath === '/inventarios' ? 'active' : '' %>" href="/dashboard">Dashboard</a>
-          <a class="<%= currentPath === '/existencias' ? 'active' : '' %>" href="/existencias">Existencias</a>
+      <% if (currentUser) {
+        const isControlRole = ['admin', 'manager'].includes(currentUser.rol);
+        const countIsActive = currentPath === '/dashboard' || currentPath.startsWith('/inventarios');
+      %>
+        <nav class="nav" aria-label="Principal">
+          <% if (isControlRole) { %>
+            <a class="nav-link nav-link-home <%= currentPath === '/dashboard' ? 'active' : '' %>" href="/dashboard">
+              <span class="nav-icon">⌂</span>
+              <span>Inicio</span>
+            </a>
+            <a class="nav-link nav-link-home <%= currentPath.startsWith('/inventarios') ? 'active' : '' %>" href="/dashboard#inventarios-panel">
+              <span class="nav-icon">🧾</span>
+              <span>Inventarios</span>
+            </a>
+          <% } else { %>
+            <a class="nav-link nav-link-home <%= countIsActive ? 'active' : '' %>" href="/dashboard">
+              <span class="nav-icon">🧾</span>
+              <span>Contar</span>
+            </a>
+          <% } %>
+
+          <a class="nav-link nav-link-stock <%= currentPath === '/existencias' ? 'active' : '' %>" href="/existencias">
+            <span class="nav-icon">📦</span>
+            <span>Existencias</span>
+          </a>
         </nav>
 
         <div class="topbar-user">
@@ -24,7 +48,10 @@
           </span>
 
           <form action="/logout" method="post">
-            <button type="submit" class="btn btn-secondary btn-sm">Salir</button>
+            <button type="submit" class="btn btn-secondary btn-sm">
+              <span class="btn-icon">⇦</span>
+              <span>Salir</span>
+            </button>
           </form>
         </div>
       <% } %>

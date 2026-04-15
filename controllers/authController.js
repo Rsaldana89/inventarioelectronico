@@ -7,7 +7,7 @@ async function showLogin(req, res) {
   }
 
   return res.render('login', {
-    title: 'Iniciar sesion'
+    title: 'Iniciar sesión'
   });
 }
 

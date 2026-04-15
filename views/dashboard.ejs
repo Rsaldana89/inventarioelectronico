@@ -1,27 +1,280 @@
 <%- include('partials/header', { title: title }) %>
+<%
+  const isControlRole = currentUser && ['admin', 'manager'].includes(currentUser.rol);
+  const openInventario = (inventarios || []).find((item) => item.estado === 'abierto');
+  const recentInventarios = (inventarios || []).slice(0, 8);
+%>
 
-<section class="page-header">
-  <div>
-    <h1>Dashboard</h1>
-    <p class="muted">Consulta inventarios, filtra por fecha y crea nuevos inventarios.</p>
-  </div>
-  <a class="btn btn-secondary" href="/existencias">Ir a existencias</a>
-</section>
+<% if (!isControlRole) { %>
+  <section class="page-header page-header-home store-landing-header">
+    <div>
+      <span class="section-kicker section-kicker-home">Conteo para sucursal</span>
+      <h1>Contar inventario</h1>
+      <p class="muted">Entra, crea el inventario y empieza a capturar. Si necesitas una base, primero carga existencias.</p>
+    </div>
+    <div class="page-header-actions">
+      <a class="btn btn-stock" href="/existencias"><span class="btn-icon">📥</span><span>Cargar existencias</span></a>
+      <% if (openInventario) { %>
+        <a class="btn btn-primary" href="/inventarios/<%= openInventario.id %>"><span class="btn-icon">▶</span><span>Continuar conteo</span></a>
+      <% } %>
+    </div>
+  </section>
 
-<section class="cards-grid">
-  <article class="card stat-card"><span class="stat-label">Total</span><strong class="stat-value"><%= summary.total || 0 %></strong></article>
-  <article class="card stat-card"><span class="stat-label">Abiertos</span><strong class="stat-value"><%= summary.abiertos || 0 %></strong></article>
-  <article class="card stat-card"><span class="stat-label">Cerrados</span><strong class="stat-value"><%= summary.cerrados || 0 %></strong></article>
-</section>
+  <section class="store-hero-grid">
+    <article class="card section-card section-card-home store-primary-card">
+      <div class="card-heading">
+        <div>
+          <span class="section-kicker">Paso principal</span>
+          <h2><%= openInventario ? 'Tienes un inventario abierto' : 'Crear inventario nuevo' %></h2>
+          <p class="muted small">
+            <% if (openInventario) { %>
+              El sistema detectó un inventario pendiente para que sigas contando sin perder tiempo.
+            <% } else { %>
+              Elige la fecha y decide si contarás libremente o con base en una existencia ya cargada.
+            <% } %>
+          </p>
+        </div>
+        <span class="heading-icon">🧾</span>
+      </div>
 
-<section class="two-column">
-  <article class="card">
-    <h2>Filtrar inventarios</h2>
-    <form method="get" action="/dashboard" class="form-grid compact-grid">
+      <% if (openInventario) { %>
+        <div class="store-open-highlight">
+          <div>
+            <strong>Inventario #<%= openInventario.id %></strong>
+            <p class="muted small"><%= openInventario.sucursal_nombre %> · <%= formatDate(openInventario.fecha) %> · <%= ['con_existencia', 'con_existencias'].includes(openInventario.origen_existencias) ? 'Con existencias' : 'Conteo libre' %></p>
+          </div>
+          <span class="pill pill-open">abierto</span>
+        </div>
+        <div class="store-action-stack">
+          <a class="btn btn-primary btn-lg" href="/inventarios/<%= openInventario.id %>"><span class="btn-icon">▶</span><span>Continuar inventario</span></a>
+          <a class="btn btn-secondary" href="#crear-nuevo"><span class="btn-icon">＋</span><span>Crear otro inventario</span></a>
+        </div>
+      <% } %>
+
+      <form method="post" action="/inventarios" class="form-grid" id="crear-nuevo">
+        <label>
+          Fecha
+          <input type="date" name="fecha" value="<%= new Date().toISOString().slice(0, 10) %>" required>
+        </label>
+
+        <label>
+          Tipo de conteo
+          <select name="origen_existencias" id="origen_existencias" data-origen-select>
+            <option value="sin_existencias">Conteo libre, sin existencias</option>
+            <option value="con_existencia">Basado en existencias cargadas</option>
+          </select>
+        </label>
+
+        <label data-existencia-wrapper>
+          Fecha de existencias
+          <select name="existencia_carga_id" id="existencia_carga_id" data-existencia-select>
+            <option value="">Selecciona una fecha</option>
+            <% (cargasExistencia || []).forEach(function(carga) { %>
+              <option value="<%= carga.id %>">Existencia <%= formatDate(carga.fecha_existencia) %> · Cargado <%= formatDateTime(carga.created_at) %></option>
+            <% }) %>
+          </select>
+        </label>
+
+        <button type="submit" class="btn btn-primary btn-lg"><span class="btn-icon">▶</span><span>Crear y empezar a contar</span></button>
+      </form>
+    </article>
+
+    <article class="card section-card section-card-stock store-secondary-card">
+      <div class="card-heading">
+        <div>
+          <span class="section-kicker section-kicker-stock">Apoyo</span>
+          <h2>Cargar existencias</h2>
+          <p class="muted small">Úsalo cuando quieras iniciar el conteo con una base de existencia por sucursal y fecha.</p>
+        </div>
+        <span class="heading-icon stock-icon">📦</span>
+      </div>
+      <div class="store-action-stack">
+        <a class="btn btn-stock-primary btn-lg" href="/existencias"><span class="btn-icon">📥</span><span>Ir a existencias</span></a>
+        <div class="hint compact-hint">
+          <strong>Flujo recomendado</strong>
+          <span>1. Cargar existencias</span>
+          <span>2. Crear inventario</span>
+          <span>3. Escanear y guardar</span>
+        </div>
+      </div>
+    </article>
+  </section>
+
+  <section class="cards-grid store-summary-grid">
+    <article class="card stat-card stat-card-home"><span class="stat-label">Inventarios</span><strong class="stat-value"><%= summary.total || 0 %></strong></article>
+    <article class="card stat-card stat-card-home"><span class="stat-label">Abiertos</span><strong class="stat-value"><%= summary.abiertos || 0 %></strong></article>
+    <article class="card stat-card stat-card-home"><span class="stat-label">Cerrados</span><strong class="stat-value"><%= summary.cerrados || 0 %></strong></article>
+  </section>
+
+  <section class="card section-card section-card-home">
+    <div class="card-heading">
+      <div>
+        <span class="section-kicker">Recientes</span>
+        <h2>Inventarios de la sucursal</h2>
+      </div>
+      <span class="heading-icon">📋</span>
+    </div>
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr><th>ID</th><th>Fecha</th><th>Base</th><th>Estado</th><th>Registros</th><th>Unidades</th><th>Acción</th></tr>
+        </thead>
+        <tbody>
+          <% if (!recentInventarios.length) { %>
+            <tr><td colspan="7" class="empty-cell">Todavía no hay inventarios para esta sucursal.</td></tr>
+          <% } %>
+          <% recentInventarios.forEach(function eachInventario(inventario) { %>
+            <tr>
+              <td>#<%= inventario.id %></td>
+              <td><%= formatDate(inventario.fecha) %></td>
+              <td><%= ['con_existencia', 'con_existencias'].includes(inventario.origen_existencias) ? 'Con existencias' : 'Libre' %></td>
+              <td><span class="pill <%= inventario.estado === 'abierto' ? 'pill-open' : 'pill-closed' %>"><%= inventario.estado %></span></td>
+              <td><%= inventario.registros_capturados %></td>
+              <td><%= formatQty(inventario.unidades_capturadas) %></td>
+              <td><a class="btn btn-secondary btn-sm" href="/inventarios/<%= inventario.id %>"><span class="btn-icon">→</span><span>Abrir</span></a></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </section>
+<% } else { %>
+  <section class="page-header page-header-home">
+    <div>
+      <span class="section-kicker section-kicker-home">Panel principal</span>
+      <h1>Inicio</h1>
+      <p class="muted">Elige una acción. Desde aquí puedes contar, consultar, cargar existencias y concentrar la operación del sistema.</p>
+    </div>
+  </section>
+
+  <section class="action-grid">
+    <a class="card action-card action-card-home" href="#crear-inventario-panel">
+      <span class="action-icon">🧾</span>
+      <strong>Contar inventario</strong>
+      <p>Crear un inventario nuevo y comenzar la captura.</p>
+    </a>
+    <a class="card action-card action-card-neutral" href="#inventarios-panel">
+      <span class="action-icon">🔎</span>
+      <strong>Consultar inventarios</strong>
+      <p>Filtrar, revisar estados y abrir conteos existentes.</p>
+    </a>
+    <a class="card action-card action-card-stock" href="/existencias">
+      <span class="action-icon">📥</span>
+      <strong>Cargar existencias</strong>
+      <p>Subir cortes por sucursal para usarlos como base.</p>
+    </a>
+    <a class="card action-card action-card-admin" href="#administracion-panel">
+      <span class="action-icon">⚙</span>
+      <strong>Administrar sistema</strong>
+      <p>Concentrar filtros, sucursales y accesos de operación.</p>
+    </a>
+  </section>
+
+  <section class="cards-grid">
+    <article class="card stat-card stat-card-home"><span class="stat-label">Inventarios totales</span><strong class="stat-value"><%= summary.total || 0 %></strong></article>
+    <article class="card stat-card stat-card-home"><span class="stat-label">Abiertos</span><strong class="stat-value"><%= summary.abiertos || 0 %></strong></article>
+    <article class="card stat-card stat-card-home"><span class="stat-label">Cerrados</span><strong class="stat-value"><%= summary.cerrados || 0 %></strong></article>
+  </section>
+
+  <section class="two-column dashboard-main-grid">
+    <article class="card section-card section-card-home" id="crear-inventario-panel">
+      <div class="card-heading">
+        <div>
+          <span class="section-kicker">Contar</span>
+          <h2>Crear inventario</h2>
+        </div>
+        <span class="heading-icon">＋</span>
+      </div>
+      <form method="post" action="/inventarios" class="form-grid compact-grid">
+        <% if (currentUser.rol === 'admin') { %>
+          <label>
+            Sucursal
+            <select name="sucursal_id" required>
+              <% sucursales.forEach(function eachSucursal(sucursal) { %>
+                <option value="<%= sucursal.id %>" <%= String(filters.sucursalId || '') === String(sucursal.id) ? 'selected' : '' %>><%= sucursal.nombre %></option>
+              <% }) %>
+            </select>
+          </label>
+        <% } %>
+
+        <label>
+          Fecha
+          <input type="date" name="fecha" value="<%= new Date().toISOString().slice(0, 10) %>" required>
+        </label>
+
+        <label>
+          Tipo de conteo
+          <select name="origen_existencias" id="origen_existencias" data-origen-select>
+            <option value="sin_existencias">Conteo libre</option>
+            <option value="con_existencia">Basado en existencias</option>
+          </select>
+        </label>
+
+        <label data-existencia-wrapper>
+          Fecha de existencias
+          <select name="existencia_carga_id" id="existencia_carga_id" data-existencia-select>
+            <option value="">Selecciona una fecha</option>
+            <% (cargasExistencia || []).forEach(function(carga) { %>
+              <option value="<%= carga.id %>">#<%= carga.id %> · <%= formatDate(carga.fecha_existencia) %> · <%= formatDateTime(carga.created_at) %></option>
+            <% }) %>
+          </select>
+        </label>
+
+        <button type="submit" class="btn btn-primary"><span class="btn-icon">▶</span><span>Crear inventario</span></button>
+      </form>
+      <p class="muted small">La fecha de existencias solo se activa cuando el conteo es basado en existencias.</p>
+    </article>
+
+    <article class="card section-card section-card-home" id="administracion-panel">
+      <div class="card-heading">
+        <div>
+          <span class="section-kicker">Administración</span>
+          <h2>Centro de operación</h2>
+        </div>
+        <span class="heading-icon">⚙</span>
+      </div>
+      <div class="admin-info-grid">
+        <div class="admin-info-box">
+          <span class="admin-info-label">Usuario</span>
+          <strong><%= currentUser.username %></strong>
+        </div>
+        <div class="admin-info-box">
+          <span class="admin-info-label">Rol</span>
+          <strong><%= currentUser.rol %></strong>
+        </div>
+        <div class="admin-info-box">
+          <span class="admin-info-label">Acceso principal</span>
+          <strong><%= currentUser.rol === 'admin' ? 'Todas las sucursales' : 'Operación asignada' %></strong>
+        </div>
+      </div>
+      <div class="admin-shortcuts">
+        <a class="btn btn-secondary" href="#inventarios-panel"><span class="btn-icon">🔎</span><span>Ir a consulta</span></a>
+        <a class="btn btn-stock" href="/existencias"><span class="btn-icon">📥</span><span>Ir a existencias</span></a>
+      </div>
+      <div class="hint compact-hint">
+        <strong>Flujo sugerido</strong>
+        <span>1. Cargar existencias</span>
+        <span>2. Crear inventario</span>
+        <span>3. Abrir y contar</span>
+        <span>4. Consultar resultados</span>
+      </div>
+    </article>
+  </section>
+
+  <section class="card section-card section-card-home" id="inventarios-panel">
+    <div class="card-heading">
+      <div>
+        <span class="section-kicker">Consulta</span>
+        <h2>Inventarios</h2>
+      </div>
+      <span class="heading-icon">📋</span>
+    </div>
+
+    <form method="get" action="/dashboard" class="form-grid compact-grid dashboard-filter-row">
       <% if (currentUser.rol === 'admin') { %>
         <label>
           Sucursal
-          <select name="sucursal_id" onchange="this.form.submit()">
+          <select name="sucursal_id">
             <option value="">Todas</option>
             <% sucursales.forEach(function eachSucursal(sucursal) { %>
               <option value="<%= sucursal.id %>" <%= String(filters.sucursalId || '') === String(sucursal.id) ? 'selected' : '' %>><%= sucursal.nombre %></option>
@@ -31,81 +284,34 @@
       <% } %>
       <label>Fecha inicial<input type="date" name="fecha_inicio" value="<%= filters.fechaInicio %>"></label>
       <label>Fecha final<input type="date" name="fecha_fin" value="<%= filters.fechaFin %>"></label>
-      <button type="submit" class="btn btn-secondary">Aplicar filtro</button>
+      <button type="submit" class="btn btn-secondary"><span class="btn-icon">🔎</span><span>Aplicar filtro</span></button>
     </form>
-  </article>
 
-  <article class="card">
-    <h2>Crear inventario</h2>
-    <form method="post" action="/inventarios" class="form-grid compact-grid">
-      <% if (currentUser.rol === 'admin') { %>
-        <label>
-          Sucursal
-          <select name="sucursal_id" required>
-            <% sucursales.forEach(function eachSucursal(sucursal) { %>
-              <option value="<%= sucursal.id %>" <%= String(filters.sucursalId || '') === String(sucursal.id) ? 'selected' : '' %>><%= sucursal.nombre %></option>
-            <% }) %>
-          </select>
-        </label>
-      <% } %>
-
-      <label>
-        Fecha
-        <input type="date" name="fecha" value="<%= new Date().toISOString().slice(0, 10) %>" required>
-      </label>
-
-      <label>
-        Base del inventario
-        <select name="origen_existencias" id="origen_existencias">
-          <option value="sin_existencias">Iniciar sin basarme en existencias</option>
-          <option value="con_existencia">Basarme en una existencia cargada</option>
-        </select>
-      </label>
-
-      <label>
-        Fecha de existencia
-        <select name="existencia_carga_id" id="existencia_carga_id">
-          <option value="">Selecciona una fecha</option>
-          <% (cargasExistencia || []).forEach(function(carga) { %>
-            <option value="<%= carga.id %>">#<%= carga.id %> | Existencia <%= formatDate(carga.fecha_existencia) %> | Cargado <%= formatDateTime(carga.created_at) %></option>
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr><th>ID</th><th>Fecha</th><th>Sucursal</th><th>Base</th><th>Estado</th><th>Registros</th><th>Unidades</th><th>Acciones</th></tr>
+        </thead>
+        <tbody>
+          <% if (!inventarios.length) { %>
+            <tr><td colspan="8" class="empty-cell">No hay inventarios con los filtros seleccionados.</td></tr>
+          <% } %>
+          <% inventarios.forEach(function eachInventario(inventario) { %>
+            <tr>
+              <td>#<%= inventario.id %></td>
+              <td><%= formatDate(inventario.fecha) %></td>
+              <td><%= inventario.sucursal_nombre %></td>
+              <td><%= ['con_existencia', 'con_existencias'].includes(inventario.origen_existencias) ? 'Existencia ' + formatDate(inventario.fecha_existencia) : 'Sin existencias' %></td>
+              <td><span class="pill <%= inventario.estado === 'abierto' ? 'pill-open' : 'pill-closed' %>"><%= inventario.estado %></span></td>
+              <td><%= inventario.registros_capturados %></td>
+              <td><%= formatQty(inventario.unidades_capturadas) %></td>
+              <td><a class="btn btn-secondary btn-sm" href="/inventarios/<%= inventario.id %>"><span class="btn-icon">→</span><span>Abrir</span></a></td>
+            </tr>
           <% }) %>
-        </select>
-      </label>
-
-      <button type="submit" class="btn btn-primary">Crear inventario</button>
-    </form>
-    <p class="muted small">La lista de fechas depende de la sucursal seleccionada. Primero carga existencias desde el módulo de existencias.</p>
-  </article>
-</section>
-
-<section class="card">
-  <h2>Inventarios</h2>
-  <div class="table-responsive">
-    <table class="data-table">
-      <thead>
-        <tr><th>ID</th><th>Fecha</th><th>Sucursal</th><th>Base</th><th>Estado</th><th>Registros</th><th>Unidades</th><th>Acciones</th></tr>
-      </thead>
-      <tbody>
-        <% if (!inventarios.length) { %>
-          <tr><td colspan="8" class="empty-cell">No hay inventarios con los filtros seleccionados.</td></tr>
-        <% } %>
-        <% inventarios.forEach(function eachInventario(inventario) { %>
-          <tr>
-            <td>#<%= inventario.id %></td>
-            <td><%= formatDate(inventario.fecha) %></td>
-            <td><%= inventario.sucursal_nombre %></td>
-            <td>
-              <%= ['con_existencia', 'con_existencias'].includes(inventario.origen_existencias) ? 'Existencia ' + formatDate(inventario.fecha_existencia) : 'Sin existencias' %>
-            </td>
-            <td><span class="pill <%= inventario.estado === 'abierto' ? 'pill-open' : 'pill-closed' %>"><%= inventario.estado %></span></td>
-            <td><%= inventario.registros_capturados %></td>
-            <td><%= formatQty(inventario.unidades_capturadas) %></td>
-            <td><a class="btn btn-secondary btn-sm" href="/inventarios/<%= inventario.id %>">Abrir</a></td>
-          </tr>
-        <% }) %>
-      </tbody>
-    </table>
-  </div>
-</section>
+        </tbody>
+      </table>
+    </div>
+  </section>
+<% } %>
 
 <%- include('partials/footer') %>
