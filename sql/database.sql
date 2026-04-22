@@ -55,11 +55,15 @@ CREATE TABLE IF NOT EXISTS inventarios (
   created_by INT NULL,
   origen_existencias ENUM('sin_existencias', 'con_existencia') NOT NULL DEFAULT 'sin_existencias',
   existencia_carga_id INT NULL,
+  external_id VARCHAR(100) NULL,
+  nombre VARCHAR(150) NULL,
+  origen ENUM('web', 'mobile') NOT NULL DEFAULT 'web',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT fk_inventarios_sucursal FOREIGN KEY (sucursal_id) REFERENCES sucursales(id) ON DELETE CASCADE,
   CONSTRAINT fk_inventarios_usuario FOREIGN KEY (created_by) REFERENCES usuarios(id) ON DELETE SET NULL,
   CONSTRAINT fk_inventarios_existencia_carga FOREIGN KEY (existencia_carga_id) REFERENCES existencias_cargas(id) ON DELETE SET NULL,
+  UNIQUE KEY uk_inventarios_external_id (external_id),
   INDEX idx_inventarios_sucursal_fecha (sucursal_id, fecha)
 );
 
@@ -122,6 +126,11 @@ ON DUPLICATE KEY UPDATE
   rol = VALUES(rol),
   sucursal_id = VALUES(sucursal_id);
 
--- Si ya tienes una base previa, agrega estas columnas/tablas manualmente si faltan:
+-- Si ya tienes una base previa, agrega estas columnas manualmente si faltan:
 ALTER TABLE inventarios ADD COLUMN IF NOT EXISTS origen_existencias ENUM('sin_existencias', 'con_existencia') NOT NULL DEFAULT 'sin_existencias';
 ALTER TABLE inventarios ADD COLUMN IF NOT EXISTS existencia_carga_id INT NULL;
+ALTER TABLE inventarios ADD COLUMN IF NOT EXISTS external_id VARCHAR(100) NULL;
+ALTER TABLE inventarios ADD COLUMN IF NOT EXISTS nombre VARCHAR(150) NULL;
+ALTER TABLE inventarios ADD COLUMN IF NOT EXISTS origen ENUM('web', 'mobile') NOT NULL DEFAULT 'web';
+-- Si el indice unico no existe en una base previa, agregalo manualmente:
+-- ALTER TABLE inventarios ADD UNIQUE KEY uk_inventarios_external_id (external_id);

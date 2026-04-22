@@ -259,3 +259,71 @@ GET /health
 ## Licencia
 
 MIT
+
+## API movil incluida (version 0.09)
+
+Esta version agrega una API JSON para que la app Android pueda autenticarse y sincronizar contra el mismo backend web sin romper el login HTML.
+
+### Variables nuevas para Railway
+
+```env
+JWT_SECRET=una_clave_privada_muy_larga
+JWT_EXPIRES_IN_SECONDS=2592000
+```
+
+### Endpoints moviles
+
+- `POST /auth/login`
+- `GET /health`
+- `GET /catalog`
+- `POST /inventories/sync`
+
+### Ejemplo de login movil
+
+```bash
+curl -X POST http://localhost:3000/auth/login   -H "Content-Type: application/json"   -d '{"username":"naciones","password":"naciones123","branch":"Plaza Naciones"}'
+```
+
+### Ejemplo de catalogo
+
+```bash
+curl http://localhost:3000/catalog   -H "Authorization: Bearer TU_TOKEN"
+```
+
+### Ejemplo de sincronizacion
+
+```bash
+curl -X POST http://localhost:3000/inventories/sync   -H "Content-Type: application/json"   -H "Authorization: Bearer TU_TOKEN"   -d '{
+    "inventory": {
+      "id": "uuid-local-del-telefono",
+      "remoteId": null,
+      "name": "Inventario Android",
+      "branch": "Plaza Naciones",
+      "createdBy": "naciones",
+      "status": "PENDIENTE",
+      "createdAt": 1713744000000,
+      "updatedAt": 1713747600000
+    },
+    "items": [
+      {
+        "id": "item-1",
+        "barcode": "750100000001",
+        "sku": "1100001",
+        "productName": "Leche Entera 1L",
+        "quantity": 3,
+        "isUnknown": false,
+        "updatedAt": 1713747600000
+      }
+    ]
+  }'
+```
+
+### Notas de integracion con Android
+
+- La web sigue usando `express-session`.
+- La app Android usa token Bearer firmado con `JWT_SECRET`.
+- `GET /health` ahora responde `{ "ok": true, "status": "ok" }`.
+- Los inventarios creados desde la app se guardan en la misma tabla `inventarios` con `origen = 'mobile'`.
+- `external_id` evita duplicados cuando el telefono reintenta sincronizar.
+- El backend usa un limite JSON mayor (`5mb`) para soportar cargas grandes desde la app.
+

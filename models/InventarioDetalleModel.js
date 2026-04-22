@@ -1,13 +1,17 @@
-const db = require('../db');
-const { chunkArray } = require('../utils/common');
+const db = require('../db')
+const { chunkArray } = require('../utils/common')
 
 async function upsert(inventarioId, barcode, cantidad, modo) {
+  return upsertWithExecutor(db, inventarioId, barcode, cantidad, modo)
+}
+
+async function upsertWithExecutor(executor, inventarioId, barcode, cantidad, modo) {
   const updateClause =
     modo === 'sumar'
       ? 'inventario_detalle.cantidad + VALUES(cantidad)'
-      : 'VALUES(cantidad)';
+      : 'VALUES(cantidad)'
 
-  await db.execute(
+  await executor.execute(
     `
       INSERT INTO inventario_detalle (inventario_id, barcode, cantidad)
       VALUES (?, ?, ?)
@@ -16,18 +20,22 @@ async function upsert(inventarioId, barcode, cantidad, modo) {
         updated_at = CURRENT_TIMESTAMP
     `,
     [inventarioId, barcode, cantidad]
-  );
+  )
 }
 
 async function bulkUpsert(inventarioId, rows, modo) {
+  return bulkUpsertWithExecutor(db, inventarioId, rows, modo)
+}
+
+async function bulkUpsertWithExecutor(executor, inventarioId, rows, modo) {
   if (!rows.length) {
-    return;
+    return
   }
 
   const clause =
     modo === 'sumar'
       ? 'inventario_detalle.cantidad + VALUES(cantidad)'
-      : 'VALUES(cantidad)';
+      : 'VALUES(cantidad)'
 
   const sql = `
     INSERT INTO inventario_detalle (inventario_id, barcode, cantidad)
@@ -35,16 +43,16 @@ async function bulkUpsert(inventarioId, rows, modo) {
     ON DUPLICATE KEY UPDATE
       cantidad = ` + clause + `,
       updated_at = CURRENT_TIMESTAMP
-  `;
+  `
 
-  const chunks = chunkArray(rows, 500);
+  const chunks = chunkArray(rows, 500)
 
   for (const chunk of chunks) {
     const values = chunk.map(function mapRow(row) {
-      return [inventarioId, row.barcode, row.cantidad];
-    });
+      return [inventarioId, row.barcode, row.cantidad]
+    })
 
-    await db.query(sql, [values]);
+    await executor.query(sql, [values])
   }
 }
 
@@ -58,9 +66,9 @@ async function getSummary(inventarioId) {
       WHERE inventario_id = ?
     `,
     [inventarioId]
-  );
+  )
 
-  return rows[0] || { registros: 0, unidades: 0 };
+  return rows[0] || { registros: 0, unidades: 0 }
 }
 
 async function listByInventario(inventarioId, sucursalId) {
@@ -87,9 +95,9 @@ async function listByInventario(inventarioId, sucursalId) {
       ORDER BY CAST(COALESCE(e.codigo, p.codigo, '999999999') AS UNSIGNED) ASC, descripcion ASC, d.barcode ASC
     `,
     [sucursalId, inventarioId]
-  );
+  )
 
-  return rows;
+  return rows
 }
 
 async function updateCantidadById(detalleId, inventarioId, cantidad) {
@@ -100,7 +108,7 @@ async function updateCantidadById(detalleId, inventarioId, cantidad) {
       WHERE id = ? AND inventario_id = ?
     `,
     [cantidad, detalleId, inventarioId]
-  );
+  )
 }
 
 async function deleteById(detalleId, inventarioId) {
@@ -110,7 +118,7 @@ async function deleteById(detalleId, inventarioId) {
       WHERE id = ? AND inventario_id = ?
     `,
     [detalleId, inventarioId]
-  );
+  )
 }
 
 async function getExportRows(inventarioId) {
@@ -136,17 +144,19 @@ async function getExportRows(inventarioId) {
       ORDER BY CAST(COALESCE(e.codigo, p.codigo, '999999999') AS UNSIGNED) ASC, descripcion ASC, d.barcode ASC
     `,
     [inventarioId]
-  );
+  )
 
-  return rows;
+  return rows
 }
 
 module.exports = {
   upsert,
+  upsertWithExecutor,
   bulkUpsert,
+  bulkUpsertWithExecutor,
   getSummary,
   listByInventario,
   updateCantidadById,
   deleteById,
   getExportRows
-};
+}

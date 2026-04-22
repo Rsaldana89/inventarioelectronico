@@ -1,17 +1,17 @@
-const db = require('../db');
-const { chunkArray, isValidInventorySku } = require('../utils/common');
+const db = require('../db')
+const { chunkArray, isValidInventorySku } = require('../utils/common')
 
 async function count() {
-  const [rows] = await db.query('SELECT COUNT(*) AS total FROM productos');
-  return rows[0] ? Number(rows[0].total || 0) : 0;
+  const [rows] = await db.query('SELECT COUNT(*) AS total FROM productos')
+  return rows[0] ? Number(rows[0].total || 0) : 0
 }
 
 async function replaceAll(products) {
-  const connection = await db.getConnection();
+  const connection = await db.getConnection()
 
   try {
-    await connection.beginTransaction();
-    await connection.query('DELETE FROM productos');
+    await connection.beginTransaction()
+    await connection.query('DELETE FROM productos')
 
     if (products.length) {
       const insertSql = `
@@ -24,9 +24,9 @@ async function replaceAll(products) {
           precio_mayoreo,
           precio_residencial
         ) VALUES ?
-      `;
+      `
 
-      const chunks = chunkArray(products.filter((p) => isValidInventorySku(p.codigo)), 500);
+      const chunks = chunkArray(products.filter((p) => isValidInventorySku(p.codigo)), 500)
 
       for (const chunk of chunks) {
         const values = chunk.map(function mapProduct(product) {
@@ -38,35 +38,35 @@ async function replaceAll(products) {
             product.precio_menudeo,
             product.precio_mayoreo,
             product.precio_residencial
-          ];
-        });
+          ]
+        })
 
         if (values.length) {
-          await connection.query(insertSql, [values]);
+          await connection.query(insertSql, [values])
         }
       }
     }
 
-    await connection.commit();
+    await connection.commit()
   } catch (error) {
-    await connection.rollback();
-    throw error;
+    await connection.rollback()
+    throw error
   } finally {
-    connection.release();
+    connection.release()
   }
 }
 
 async function truncateAll() {
-  await db.query('DELETE FROM productos');
+  await db.query('DELETE FROM productos')
 }
 
 async function getLookupMaps() {
   const [rows] = await db.query(
     'SELECT codigo, barcode, descripcion, familia FROM productos WHERE codigo REGEXP "^[0-9]+$" AND CAST(codigo AS UNSIGNED) BETWEEN 1100000 AND 2200000'
-  );
+  )
 
-  const byCodigo = new Map();
-  const byBarcode = new Map();
+  const byCodigo = new Map()
+  const byBarcode = new Map()
 
   rows.forEach(function eachRow(row) {
     const normalized = {
@@ -74,18 +74,18 @@ async function getLookupMaps() {
       barcode: row.barcode,
       descripcion: row.descripcion,
       familia: row.familia
-    };
+    }
 
     if (row.codigo) {
-      byCodigo.set(row.codigo, normalized);
+      byCodigo.set(row.codigo, normalized)
     }
 
     if (row.barcode) {
-      byBarcode.set(row.barcode, normalized);
+      byBarcode.set(row.barcode, normalized)
     }
-  });
+  })
 
-  return { byCodigo, byBarcode };
+  return { byCodigo, byBarcode }
 }
 
 async function findByScan(value) {
@@ -99,15 +99,38 @@ async function findByScan(value) {
       LIMIT 1
     `,
     [value, value]
-  );
+  )
 
-  return rows[0] || null;
+  return rows[0] || null
 }
 
 async function getLastUpdatedAt() {
-  const [rows] = await db.query('SELECT MAX(updated_at) AS last FROM productos');
-  const result = rows && rows[0] ? rows[0].last : null;
-  return result || null;
+  const [rows] = await db.query('SELECT MAX(updated_at) AS last FROM productos')
+  const result = rows && rows[0] ? rows[0].last : null
+  return result || null
+}
+
+async function listForMobileCatalog() {
+  const [rows] = await db.query(
+    `
+      SELECT
+        COALESCE(NULLIF(TRIM(barcode), ''), codigo) AS barcode,
+        codigo AS sku,
+        descripcion AS name
+      FROM productos
+      WHERE codigo REGEXP '^[0-9]+$'
+        AND CAST(codigo AS UNSIGNED) BETWEEN 1100000 AND 2200000
+      ORDER BY CAST(codigo AS UNSIGNED) ASC, descripcion ASC
+    `
+  )
+
+  return rows.map(function mapRow(row) {
+    return {
+      barcode: String(row.barcode || ''),
+      sku: String(row.sku || ''),
+      name: String(row.name || '')
+    }
+  })
 }
 
 module.exports = {
@@ -116,5 +139,6 @@ module.exports = {
   truncateAll,
   getLookupMaps,
   findByScan,
-  getLastUpdatedAt
-};
+  getLastUpdatedAt,
+  listForMobileCatalog
+}

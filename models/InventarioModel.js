@@ -1,43 +1,61 @@
-const db = require('../db');
+const db = require('../db')
 
 function applyFilters(user, filters) {
-  const conditions = ['1 = 1'];
-  const params = [];
+  const conditions = ['1 = 1']
+  const params = []
 
   if (user.rol !== 'admin') {
-    conditions.push('i.sucursal_id = ?');
-    params.push(user.sucursal_id);
+    conditions.push('i.sucursal_id = ?')
+    params.push(user.sucursal_id)
   } else if (filters.sucursalId) {
-    conditions.push('i.sucursal_id = ?');
-    params.push(filters.sucursalId);
+    conditions.push('i.sucursal_id = ?')
+    params.push(filters.sucursalId)
   }
 
   if (filters.fechaInicio) {
-    conditions.push('i.fecha >= ?');
-    params.push(filters.fechaInicio);
+    conditions.push('i.fecha >= ?')
+    params.push(filters.fechaInicio)
   }
 
   if (filters.fechaFin) {
-    conditions.push('i.fecha <= ?');
-    params.push(filters.fechaFin);
+    conditions.push('i.fecha <= ?')
+    params.push(filters.fechaFin)
   }
 
-  return { where: 'WHERE ' + conditions.join(' AND '), params };
+  return { where: 'WHERE ' + conditions.join(' AND '), params }
 }
 
 async function create(data) {
   const [result] = await db.execute(
     `
-      INSERT INTO inventarios (sucursal_id, fecha, estado, created_by, origen_existencias, existencia_carga_id)
-      VALUES (?, ?, 'abierto', ?, ?, ?)
+      INSERT INTO inventarios (
+        sucursal_id,
+        fecha,
+        estado,
+        created_by,
+        origen_existencias,
+        existencia_carga_id,
+        nombre,
+        origen
+      )
+      VALUES (?, ?, 'abierto', ?, ?, ?, ?, ?)
     `,
-    [data.sucursalId, data.fecha, data.createdBy || null, data.origenExistencias || 'sin_existencias', data.existenciaCargaId || null]
-  );
-  return result.insertId;
+    [
+      data.sucursalId,
+      data.fecha,
+      data.createdBy || null,
+      data.origenExistencias || 'sin_existencias',
+      data.existenciaCargaId || null,
+      data.nombre || null,
+      data.origen || 'web'
+    ]
+  )
+  return result.insertId
 }
 
-async function getById(id) {
-  const [rows] = await db.execute(
+async function getById(id, executor) {
+  const runner = executor || db
+  const [rows] = await runner.execute(
     `
       SELECT
         i.id,
@@ -49,6 +67,9 @@ async function getById(id) {
         i.updated_at,
         i.origen_existencias,
         i.existencia_carga_id,
+        i.external_id,
+        i.nombre,
+        i.origen,
         s.nombre AS sucursal_nombre,
         ec.fecha_existencia
       FROM inventarios i
@@ -58,16 +79,98 @@ async function getById(id) {
       LIMIT 1
     `,
     [id]
-  );
-  return rows[0] || null;
+  )
+  return rows[0] || null
+}
+
+async function getByExternalId(externalId, executor) {
+  const runner = executor || db
+  const [rows] = await runner.execute(
+    `
+      SELECT
+        i.id,
+        i.sucursal_id,
+        i.fecha,
+        i.estado,
+        i.created_by,
+        i.created_at,
+        i.updated_at,
+        i.origen_existencias,
+        i.existencia_carga_id,
+        i.external_id,
+        i.nombre,
+        i.origen
+      FROM inventarios i
+      WHERE i.external_id = ?
+      LIMIT 1
+    `,
+    [externalId]
+  )
+
+  return rows[0] || null
+}
+
+async function createFromMobile(data, executor) {
+  const runner = executor || db
+  const [result] = await runner.execute(
+    `
+      INSERT INTO inventarios (
+        sucursal_id,
+        fecha,
+        estado,
+        created_by,
+        origen_existencias,
+        existencia_carga_id,
+        external_id,
+        nombre,
+        origen
+      )
+      VALUES (?, ?, 'abierto', ?, 'sin_existencias', NULL, ?, ?, ?)
+    `,
+    [
+      data.sucursalId,
+      data.fecha,
+      data.createdBy || null,
+      data.externalId,
+      data.nombre || null,
+      data.origen || 'mobile'
+    ]
+  )
+
+  return result.insertId
+}
+
+async function updateFromMobile(data, executor) {
+  const runner = executor || db
+  await runner.execute(
+    `
+      UPDATE inventarios
+      SET
+        external_id = ?,
+        nombre = ?,
+        fecha = ?,
+        created_by = COALESCE(created_by, ?),
+        origen = ?,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `,
+    [
+      data.externalId,
+      data.nombre || null,
+      data.fecha,
+      data.createdBy || null,
+      data.origen || 'mobile',
+      data.id
+    ]
+  )
 }
 
 async function close(id) {
-  await db.execute("UPDATE inventarios SET estado = 'cerrado' WHERE id = ?", [id]);
+  await db.execute("UPDATE inventarios SET estado = 'cerrado' WHERE id = ?", [id])
 }
 
 async function listForDashboard(user, filters) {
-  const scoped = applyFilters(user, filters);
+  const scoped = applyFilters(user, filters)
   const [rows] = await db.query(
     `
       SELECT
@@ -77,6 +180,9 @@ async function listForDashboard(user, filters) {
         i.estado,
         i.origen_existencias,
         i.existencia_carga_id,
+        i.external_id,
+        i.nombre,
+        i.origen,
         ec.fecha_existencia,
         s.nombre AS sucursal_nombre,
         COUNT(DISTINCT d.id) AS registros_capturados,
@@ -86,16 +192,16 @@ async function listForDashboard(user, filters) {
       LEFT JOIN existencias_cargas ec ON ec.id = i.existencia_carga_id
       LEFT JOIN inventario_detalle d ON d.inventario_id = i.id
       ${scoped.where}
-      GROUP BY i.id, i.fecha, i.created_at, i.estado, i.origen_existencias, i.existencia_carga_id, ec.fecha_existencia, s.nombre
+      GROUP BY i.id, i.fecha, i.created_at, i.estado, i.origen_existencias, i.existencia_carga_id, i.external_id, i.nombre, i.origen, ec.fecha_existencia, s.nombre
       ORDER BY i.fecha DESC, i.id DESC
     `,
     scoped.params
-  );
-  return rows;
+  )
+  return rows
 }
 
 async function getDashboardSummary(user, filters) {
-  const scoped = applyFilters(user, filters);
+  const scoped = applyFilters(user, filters)
   const [rows] = await db.query(
     `
       SELECT
@@ -106,14 +212,17 @@ async function getDashboardSummary(user, filters) {
       ${scoped.where}
     `,
     scoped.params
-  );
-  return rows[0] || { total: 0, abiertos: 0, cerrados: 0 };
+  )
+  return rows[0] || { total: 0, abiertos: 0, cerrados: 0 }
 }
 
 module.exports = {
   create,
   getById,
+  getByExternalId,
+  createFromMobile,
+  updateFromMobile,
   close,
   listForDashboard,
   getDashboardSummary
-};
+}
