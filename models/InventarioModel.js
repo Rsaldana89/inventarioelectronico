@@ -73,6 +73,7 @@ async function listForDashboard(user, filters) {
       SELECT
         i.id,
         i.fecha,
+        i.created_at,
         i.estado,
         i.origen_existencias,
         i.existencia_carga_id,
@@ -85,7 +86,7 @@ async function listForDashboard(user, filters) {
       LEFT JOIN existencias_cargas ec ON ec.id = i.existencia_carga_id
       LEFT JOIN inventario_detalle d ON d.inventario_id = i.id
       ${scoped.where}
-      GROUP BY i.id, i.fecha, i.estado, i.origen_existencias, i.existencia_carga_id, ec.fecha_existencia, s.nombre
+      GROUP BY i.id, i.fecha, i.created_at, i.estado, i.origen_existencias, i.existencia_carga_id, ec.fecha_existencia, s.nombre
       ORDER BY i.fecha DESC, i.id DESC
     `,
     scoped.params

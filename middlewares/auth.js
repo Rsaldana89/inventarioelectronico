@@ -26,7 +26,8 @@ function ensureAuthenticated(req, res, next) {
 }
 
 function ensureAdmin(req, res, next) {
-  if (req.session.user && req.session.user.rol === 'admin') {
+  // Permitir tanto a administradores como a managers acceder a secciones de administración.
+  if (req.session.user && isAdmin(req.session.user)) {
     return next();
   }
 
@@ -35,7 +36,8 @@ function ensureAdmin(req, res, next) {
 }
 
 function isAdmin(user) {
-  return Boolean(user && user.rol === 'admin');
+  // Considerar a los roles 'admin' y 'manager' como administradores para efectos de autorización.
+  return Boolean(user && (user.rol === 'admin' || user.rol === 'manager'));
 }
 
 function canAccessSucursal(user, sucursalId) {

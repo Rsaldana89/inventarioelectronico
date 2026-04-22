@@ -6,7 +6,9 @@ async function showDashboard(req, res, next) {
   try {
     const user = req.session.user;
     const sucursales = await SucursalModel.getAll();
-    const selectedSucursalId = user.rol === 'admin' ? String(req.query.sucursal_id || '') : String(user.sucursal_id || '');
+    // Permitir que usuarios con rol 'admin' o 'manager' seleccionen la sucursal de forma manual.
+    const isControlUser = user.rol === 'admin' || user.rol === 'manager';
+    const selectedSucursalId = isControlUser ? String(req.query.sucursal_id || '') : String(user.sucursal_id || '');
 
     const filters = {
       fechaInicio: String(req.query.fecha_inicio || ''),

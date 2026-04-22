@@ -30,8 +30,13 @@ async function showExistencias(req, res, next) {
     const sucursales = await SucursalModel.getAll();
     let selectedSucursalId = getSucursalIdFromRequest(req);
 
+    // Si el usuario no es admin/manager (es decir, es una sucursal), se preselecciona la primera sucursal.
+    // Para administradores y managers no se preselecciona ninguna, obligando a elegir explicitamente.
     if (!selectedSucursalId && sucursales.length) {
-      selectedSucursalId = sucursales[0].id;
+      const { isAdmin } = require('../middlewares/auth');
+      if (!isAdmin(user)) {
+        selectedSucursalId = sucursales[0].id;
+      }
     }
     if (selectedSucursalId && !canAccessSucursal(user, selectedSucursalId)) {
       setFlash(req, 'error', 'No tienes permiso para consultar esa sucursal.');

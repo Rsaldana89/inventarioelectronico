@@ -41,7 +41,12 @@
         <div class="store-open-highlight">
           <div>
             <strong>Inventario #<%= openInventario.id %></strong>
-            <p class="muted small"><%= openInventario.sucursal_nombre %> · <%= formatDate(openInventario.fecha) %> · <%= ['con_existencia', 'con_existencias'].includes(openInventario.origen_existencias) ? 'Con existencias' : 'Conteo libre' %></p>
+            <p class="muted small">
+              <%= openInventario.sucursal_nombre %> ·
+              <%= formatDate(openInventario.fecha) %> ·
+              Creado <%= formatDateTime(openInventario.created_at) %> ·
+              <%= ['con_existencia', 'con_existencias'].includes(openInventario.origen_existencias) ? 'Con existencias' : 'Conteo libre' %>
+            </p>
           </div>
           <span class="pill pill-open">abierto</span>
         </div>
@@ -115,17 +120,18 @@
       <span class="heading-icon">📋</span>
     </div>
     <div class="table-responsive">
-      <table class="data-table">
+        <table class="data-table">
         <thead>
-          <tr><th>ID</th><th>Fecha</th><th>Base</th><th>Estado</th><th>Registros</th><th>Unidades</th><th>Acción</th></tr>
+          <tr><th>ID</th><th>Creado</th><th>Fecha</th><th>Base</th><th>Estado</th><th>Registros</th><th>Unidades</th><th>Acción</th></tr>
         </thead>
         <tbody>
           <% if (!recentInventarios.length) { %>
-            <tr><td colspan="7" class="empty-cell">Todavía no hay inventarios para esta sucursal.</td></tr>
+            <tr><td colspan="8" class="empty-cell">Todavía no hay inventarios para esta sucursal.</td></tr>
           <% } %>
           <% recentInventarios.forEach(function eachInventario(inventario) { %>
             <tr>
               <td>#<%= inventario.id %></td>
+              <td><%= formatDateTime(inventario.created_at) %></td>
               <td><%= formatDate(inventario.fecha) %></td>
               <td><%= ['con_existencia', 'con_existencias'].includes(inventario.origen_existencias) ? 'Con existencias' : 'Libre' %></td>
               <td><span class="pill <%= inventario.estado === 'abierto' ? 'pill-open' : 'pill-closed' %>"><%= inventario.estado %></span></td>
@@ -135,7 +141,7 @@
             </tr>
           <% }) %>
         </tbody>
-      </table>
+        </table>
     </div>
   </section>
 <% } else { %>
@@ -186,7 +192,7 @@
         <span class="heading-icon">＋</span>
       </div>
       <form method="post" action="/inventarios" class="form-grid compact-grid">
-        <% if (currentUser.rol === 'admin') { %>
+        <% if (['admin','manager'].includes(currentUser.rol)) { %>
           <label>
             Sucursal
             <select name="sucursal_id" required>
@@ -244,7 +250,7 @@
         </div>
         <div class="admin-info-box">
           <span class="admin-info-label">Acceso principal</span>
-          <strong><%= currentUser.rol === 'admin' ? 'Todas las sucursales' : 'Operación asignada' %></strong>
+          <strong><%= ['admin','manager'].includes(currentUser.rol) ? 'Todas las sucursales' : 'Operación asignada' %></strong>
         </div>
       </div>
       <div class="admin-shortcuts">
@@ -271,7 +277,7 @@
     </div>
 
     <form method="get" action="/dashboard" class="form-grid compact-grid dashboard-filter-row">
-      <% if (currentUser.rol === 'admin') { %>
+      <% if (['admin','manager'].includes(currentUser.rol)) { %>
         <label>
           Sucursal
           <select name="sucursal_id">
@@ -290,15 +296,16 @@
     <div class="table-responsive">
       <table class="data-table">
         <thead>
-          <tr><th>ID</th><th>Fecha</th><th>Sucursal</th><th>Base</th><th>Estado</th><th>Registros</th><th>Unidades</th><th>Acciones</th></tr>
+          <tr><th>ID</th><th>Creado</th><th>Fecha</th><th>Sucursal</th><th>Base</th><th>Estado</th><th>Registros</th><th>Unidades</th><th>Acciones</th></tr>
         </thead>
         <tbody>
           <% if (!inventarios.length) { %>
-            <tr><td colspan="8" class="empty-cell">No hay inventarios con los filtros seleccionados.</td></tr>
+            <tr><td colspan="9" class="empty-cell">No hay inventarios con los filtros seleccionados.</td></tr>
           <% } %>
           <% inventarios.forEach(function eachInventario(inventario) { %>
             <tr>
               <td>#<%= inventario.id %></td>
+              <td><%= formatDateTime(inventario.created_at) %></td>
               <td><%= formatDate(inventario.fecha) %></td>
               <td><%= inventario.sucursal_nombre %></td>
               <td><%= ['con_existencia', 'con_existencias'].includes(inventario.origen_existencias) ? 'Existencia ' + formatDate(inventario.fecha_existencia) : 'Sin existencias' %></td>

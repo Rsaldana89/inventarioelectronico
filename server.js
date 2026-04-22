@@ -58,8 +58,8 @@ app.locals.formatDateTime = function formatDateTime(value) {
   const dd = String(date.getDate()).padStart(2, '0');
   const hh = String(date.getHours()).padStart(2, '0');
   const mi = String(date.getMinutes()).padStart(2, '0');
-  const ss = String(date.getSeconds()).padStart(2, '0');
-  return `${yyyy}-${mm}-${dd} ${hh}:${mi}:${ss}`;
+  // Solo mostrar hasta minutos; los segundos no son relevantes para identificar registros recientes.
+  return `${yyyy}-${mm}-${dd} ${hh}:${mi}`;
 };
 
 app.use(express.urlencoded({ extended: true }));
