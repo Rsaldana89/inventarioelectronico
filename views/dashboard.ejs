@@ -43,7 +43,6 @@
             <strong>Inventario #<%= openInventario.id %></strong>
             <p class="muted small">
               <%= openInventario.sucursal_nombre %> ·
-              <%= formatDate(openInventario.fecha) %> ·
               Creado <%= formatDateTime(openInventario.created_at) %> ·
               <%= ['con_existencia', 'con_existencias'].includes(openInventario.origen_existencias) ? 'Con existencias' : 'Conteo libre' %>
             </p>
@@ -75,12 +74,12 @@
           <select name="existencia_carga_id" id="existencia_carga_id" data-existencia-select>
             <option value="">Selecciona una fecha</option>
             <% (cargasExistencia || []).forEach(function(carga) { %>
-              <option value="<%= carga.id %>">Existencia <%= formatDate(carga.fecha_existencia) %> · Cargado <%= formatDateTime(carga.created_at) %></option>
+              <option value="<%= carga.id %>">Existencias cargadas <%= formatDateTime(carga.created_at) %></option>
             <% }) %>
           </select>
         </label>
 
-        <button type="submit" class="btn btn-primary btn-lg"><span class="btn-icon">▶</span><span>Crear y empezar a contar</span></button>
+        <button type="submit" class="btn btn-primary btn-primary-cta btn-lg"><span class="btn-icon">▶</span><span>Crear y empezar a contar</span></button>
       </form>
     </article>
 
@@ -221,7 +220,7 @@
           <select name="existencia_carga_id" id="existencia_carga_id" data-existencia-select>
             <option value="">Selecciona una fecha</option>
             <% (cargasExistencia || []).forEach(function(carga) { %>
-              <option value="<%= carga.id %>">#<%= carga.id %> · <%= formatDate(carga.fecha_existencia) %> · <%= formatDateTime(carga.created_at) %></option>
+              <option value="<%= carga.id %>">#<%= carga.id %> · Cargado <%= formatDateTime(carga.created_at) %></option>
             <% }) %>
           </select>
         </label>
@@ -308,7 +307,7 @@
               <td><%= formatDateTime(inventario.created_at) %></td>
               <td><%= formatDate(inventario.fecha) %></td>
               <td><%= inventario.sucursal_nombre %></td>
-              <td><%= ['con_existencia', 'con_existencias'].includes(inventario.origen_existencias) ? 'Existencia ' + formatDate(inventario.fecha_existencia) : 'Sin existencias' %></td>
+              <td><%= ['con_existencia', 'con_existencias'].includes(inventario.origen_existencias) ? 'Con existencias' : 'Sin existencias' %></td>
               <td><span class="pill <%= inventario.estado === 'abierto' ? 'pill-open' : 'pill-closed' %>"><%= inventario.estado %></span></td>
               <td><%= inventario.registros_capturados %></td>
               <td><%= formatQty(inventario.unidades_capturadas) %></td>

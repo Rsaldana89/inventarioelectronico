@@ -42,6 +42,23 @@ document.addEventListener('DOMContentLoaded', function onReady() {
 
   syncExistenciaFields();
 
+  document.querySelectorAll('[data-password-toggle]').forEach(function bindPasswordToggle(toggleButton) {
+    var field = toggleButton.closest('.password-field');
+    var input = field ? field.querySelector('[data-password-input]') : null;
+    if (!input) {
+      return;
+    }
+
+    toggleButton.addEventListener('click', function onTogglePassword() {
+      var visible = input.type === 'text';
+      input.type = visible ? 'password' : 'text';
+      toggleButton.setAttribute('aria-pressed', visible ? 'false' : 'true');
+      toggleButton.setAttribute('aria-label', visible ? 'Mostrar contraseña' : 'Ocultar contraseña');
+      toggleButton.innerHTML = visible ? '<span aria-hidden="true">👁</span>' : '<span aria-hidden="true">🙈</span>';
+      input.focus();
+    });
+  });
+
   var CAPTURE_MODE_KEY = 'inventario_capture_mode';
   var currentCaptureMode = localStorage.getItem(CAPTURE_MODE_KEY) || 'manual';
   if (currentCaptureMode !== 'continuo') {

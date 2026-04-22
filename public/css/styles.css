@@ -6,6 +6,7 @@
   --text: #1f2937;
   --muted: #6b7280;
   --heading: #7a1f24;
+  --brand-title: #922a31;
   --primary: #2563eb;
   --primary-soft: #eaf1ff;
   --primary-border: #cfe0ff;
@@ -53,9 +54,12 @@ a { color: inherit; text-decoration: none; }
   align-items: center;
   gap: 10px;
   font-weight: 800;
-  color: var(--primary);
+  color: var(--heading);
   font-size: 1.15rem;
   letter-spacing: -0.02em;
+}
+.brand-title {
+  color: var(--brand-title);
 }
 .brand-mark {
   display: inline-flex;
@@ -64,9 +68,9 @@ a { color: inherit; text-decoration: none; }
   width: 32px;
   height: 32px;
   border-radius: 10px;
-  background: linear-gradient(135deg, var(--primary), #5aa2ff);
-  color: #fff;
-  box-shadow: var(--shadow-soft);
+  background: #f3efea;
+  color: var(--heading);
+  box-shadow: var(--shadow);
 }
 .nav {
   display: flex;
@@ -88,15 +92,15 @@ a { color: inherit; text-decoration: none; }
 .nav-link:hover { transform: translateY(-1px); }
 .nav-link-home.active,
 .nav-link-home:hover {
-  background: var(--primary-soft);
-  color: var(--primary);
-  border-color: var(--primary-border);
+  background: #f3efea;
+  color: var(--heading);
+  border-color: var(--border);
 }
 .nav-link-stock.active,
 .nav-link-stock:hover {
-  background: var(--stock-soft);
-  color: var(--stock);
-  border-color: var(--stock-border);
+  background: #f3efea;
+  color: var(--heading);
+  border-color: var(--border);
 }
 .nav-icon, .btn-icon { font-size: 0.95rem; line-height: 1; }
 .topbar-user { display: flex; align-items: center; gap: 12px; }
@@ -219,8 +223,12 @@ input:focus, select:focus {
 }
 .btn:hover { transform: translateY(-1px); }
 .btn-primary {
-  background: linear-gradient(135deg, var(--primary), #4388ff);
+  background: linear-gradient(135deg, #7a1f24, #922a31);
   color: #fff;
+  box-shadow: var(--shadow);
+}
+.btn-primary-cta {
+  background: linear-gradient(135deg, var(--primary), #4388ff);
   box-shadow: var(--shadow-soft);
 }
 .btn-secondary {
@@ -332,6 +340,37 @@ input:focus, select:focus {
   background: var(--primary-soft);
   color: var(--primary);
   font-weight: 800;
+}
+.password-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.password-field input {
+  padding-right: 48px;
+}
+.password-toggle {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 10px;
+  background: #f3efea;
+  color: var(--heading);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.password-toggle:hover {
+  background: #ece4dc;
+}
+.password-toggle:focus-visible {
+  outline: 2px solid rgba(122, 31, 36, 0.22);
+  outline-offset: 2px;
 }
 .login-card.modern-login-card {
   margin-bottom: 0;

@@ -30,7 +30,12 @@
 
       <label>
         Contraseña
-        <input type="password" name="password" placeholder="Contraseña" required>
+        <span class="password-field">
+          <input type="password" name="password" placeholder="Contraseña" required data-password-input>
+          <button type="button" class="password-toggle" data-password-toggle aria-label="Mostrar contraseña" aria-pressed="false">
+            <span aria-hidden="true">👁</span>
+          </button>
+        </span>
       </label>
 
       <button type="submit" class="btn btn-primary btn-lg">

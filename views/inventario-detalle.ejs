@@ -131,7 +131,7 @@
       <p class="muted">
         <strong>Sucursal:</strong> <%= inventario.sucursal_nombre %> |
         <strong>Fecha:</strong> <%= formatDate(inventario.fecha) %> |
-        <strong>Base:</strong> <%= usesExistencias ? 'Existencia ' + formatDate(inventario.fecha_existencia) : 'Sin existencias' %> |
+        <strong>Base:</strong> <%= usesExistencias ? 'Con existencias' : 'Sin existencias' %> |
         <strong>Estado:</strong>
         <span class="pill <%= inventario.estado === 'abierto' ? 'pill-open' : 'pill-closed' %>"><%= inventario.estado %></span>
       </p>
