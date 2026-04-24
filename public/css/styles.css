@@ -1,8 +1,16 @@
 ﻿:root {
+  /*
+   * Color and spacing variables for the UI.  These have been adjusted to move
+   * the overall look away from a “rounded SaaS” feel towards a more utilitarian
+   * retail application.  Borders are slightly darker for better definition,
+   * radii are smaller to reduce the bubbly appearance, and shadows are toned
+   * down to emphasise structure over floating panels.
+   */
   --bg: #f4f1ed;
   --card: #fbf9f7;
   --card-soft: #fbf9f7;
-  --border: #ddd6cf;
+  /* A darker border tone to subtly frame panels and tables */
+  --border: #c8bfb6;
   --text: #1f2937;
   --muted: #6b7280;
   --heading: #7a1f24;
@@ -17,9 +25,11 @@
   --danger: #d92d20;
   --success: #12b76a;
   --warning: #f79009;
-  --shadow: 0 8px 20px rgba(31, 41, 55, 0.06);
-  --shadow-soft: 0 12px 28px rgba(31, 41, 55, 0.08);
-  --radius: 14px;
+  /* Softer shadows for a grounded look */
+  --shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  --shadow-soft: 0 4px 8px rgba(0, 0, 0, 0.05);
+  /* Reduced border radius for cards and controls */
+  --radius: 6px;
 }
 
 * { box-sizing: border-box; }
@@ -110,7 +120,7 @@ a { color: inherit; text-decoration: none; }
   text-align: right;
   font-size: 0.92rem;
   padding: 8px 12px;
-  border-radius: 12px;
+  border-radius: var(--radius);
   background: #fff;
   border: 1px solid var(--border);
 }
@@ -157,7 +167,8 @@ a { color: inherit; text-decoration: none; }
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 20px;
-  box-shadow: var(--shadow);
+  /* Remove heavy drop shadow; emphasise border for a grounded panel */
+  box-shadow: none;
   margin-bottom: 22px;
 }
 .section-card { position: relative; overflow: hidden; }
@@ -198,8 +209,9 @@ input, select, button { font: inherit; }
 input, select {
   width: 100%;
   border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 12px 13px;
+  /* Sharper controls with slightly reduced radius and larger padding for quicker input */
+  border-radius: var(--radius);
+  padding: 14px 16px;
   background: #fff;
   color: var(--text);
   transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
@@ -211,8 +223,8 @@ input:focus, select:focus {
 }
 .btn {
   border: 0;
-  border-radius: 12px;
-  padding: 11px 14px;
+  border-radius: var(--radius);
+  padding: 12px 20px;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -223,13 +235,18 @@ input:focus, select:focus {
 }
 .btn:hover { transform: translateY(-1px); }
 .btn-primary {
-  background: linear-gradient(135deg, #7a1f24, #922a31);
+  /* Use heading and brand colors for a stronger primary CTA */
+  background: linear-gradient(135deg, var(--heading), var(--brand-title));
   color: #fff;
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow-soft);
+  font-weight: 800;
+  letter-spacing: 0.02em;
 }
 .btn-primary-cta {
-  background: linear-gradient(135deg, var(--primary), #4388ff);
+  background: linear-gradient(135deg, var(--primary), #3a7ae0);
   box-shadow: var(--shadow-soft);
+  font-weight: 800;
+  letter-spacing: 0.02em;
 }
 .btn-secondary {
   background: #fff;
@@ -244,7 +261,7 @@ input:focus, select:focus {
 }
 .btn-danger { background: var(--danger); color: #fff; }
 .btn-sm { padding: 8px 12px; }
-.btn-lg { min-height: 50px; font-size: 1rem; }
+.btn-lg { min-height: 56px; font-size: 1.1rem; }
 .btn-disabled { pointer-events: none; opacity: 0.5; }
 .muted { color: var(--muted); }
 .small { font-size: 0.92rem; }
@@ -255,7 +272,7 @@ input:focus, select:focus {
 .table-responsive {
   overflow-x: auto;
   border: 1px solid var(--border);
-  border-radius: 14px;
+  border-radius: var(--radius);
   background: #fff;
 }
 .data-table { width: 100%; border-collapse: collapse; }
@@ -263,10 +280,29 @@ input:focus, select:focus {
 .data-table th, .data-table td { padding: 14px 10px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: middle; }
 .data-table tbody tr:hover { background: rgba(37, 99, 235, 0.03); }
 .empty-cell { text-align: center; color: var(--muted); }
-.pill { display: inline-flex; padding: 6px 10px; border-radius: 999px; font-size: 0.88rem; font-weight: 700; }
-.pill-open { background: rgba(18, 183, 106, 0.12); color: #067647; }
-.pill-closed { background: rgba(102, 112, 133, 0.14); color: #344054; }
-.pill-pending { background: rgba(247, 144, 9, 0.14); color: #b54708; }
+.pill {
+  display: inline-flex;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  border-left: 4px solid;
+}
+.pill-open {
+  background: rgba(18, 183, 106, 0.08);
+  color: #067647;
+  border-left-color: #12b76a;
+}
+.pill-closed {
+  background: rgba(102, 112, 133, 0.08);
+  color: #344054;
+  border-left-color: #667085;
+}
+.pill-pending {
+  background: rgba(247, 144, 9, 0.08);
+  color: #b54708;
+  border-left-color: #f79009;
+}
 .alert { padding: 12px 14px; border-radius: 12px; margin-bottom: 16px; border: 1px solid transparent; }
 .alert-success { background: rgba(18, 183, 106, 0.1); color: #067647; border-color: rgba(18, 183, 106, 0.16); }
 .alert-error { background: rgba(217, 45, 32, 0.1); color: #b42318; border-color: rgba(217, 45, 32, 0.16); }
