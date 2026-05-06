@@ -38,11 +38,16 @@ async function login(req, res, next) {
       sucursal_nombre: sucursalNombre
     })
 
+    // Include the user's role and resolved branch in the response.  The role allows
+    // client applications to differentiate between branch-level users and
+    // administrators/managers.  Always prefer the resolved branch name from the
+    // database (`sucursalNombre`) over the branch provided in the request.
     return res.status(200).json({
       token,
       userId: String(user.id),
       displayName: user.username,
-      branch: sucursalNombre || branch || null
+      branch: sucursalNombre || branch || null,
+      role: user.rol
     })
   } catch (error) {
     return next(error)
