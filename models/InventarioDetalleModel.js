@@ -100,6 +100,37 @@ async function listByInventario(inventarioId, sucursalId) {
   return rows
 }
 
+
+async function listForMobileByInventario(inventarioId, sucursalId) {
+  const [rows] = await db.execute(
+    `
+      SELECT
+        d.id,
+        d.barcode,
+        d.cantidad,
+        d.updated_at,
+        COALESCE(e.codigo, p.codigo, d.barcode) AS codigo,
+        COALESCE(e.descripcion, p.descripcion, 'Desconocido') AS descripcion
+      FROM inventario_detalle d
+      LEFT JOIN existencias e
+        ON e.sucursal_id = ? AND e.barcode = d.barcode
+      LEFT JOIN productos p
+        ON p.id = (
+          SELECT p2.id
+          FROM productos p2
+          WHERE p2.barcode = d.barcode OR p2.codigo = d.barcode
+          LIMIT 1
+        )
+      WHERE d.inventario_id = ?
+        AND (COALESCE(e.codigo, p.codigo, NULL) IS NULL OR (COALESCE(e.codigo, p.codigo, NULL) REGEXP '^[0-9]+$' AND CAST(COALESCE(e.codigo, p.codigo, NULL) AS UNSIGNED) BETWEEN 1100000 AND 2200000))
+      ORDER BY CAST(COALESCE(e.codigo, p.codigo, '999999999') AS UNSIGNED) ASC, descripcion ASC, d.barcode ASC
+    `,
+    [sucursalId, inventarioId]
+  )
+
+  return rows
+}
+
 async function updateCantidadById(detalleId, inventarioId, cantidad) {
   await db.execute(
     `
@@ -156,6 +187,7 @@ module.exports = {
   bulkUpsertWithExecutor,
   getSummary,
   listByInventario,
+  listForMobileByInventario,
   updateCantidadById,
   deleteById,
   getExportRows

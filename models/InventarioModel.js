@@ -200,6 +200,55 @@ async function listForDashboard(user, filters) {
   return rows
 }
 
+
+async function listOpenBySucursal(sucursalId) {
+  const [rows] = await db.query(
+    `
+      SELECT
+        i.id,
+        i.sucursal_id,
+        i.fecha,
+        i.created_at,
+        i.updated_at,
+        i.estado,
+        i.external_id,
+        i.nombre,
+        i.origen,
+        s.nombre AS sucursal_nombre,
+        COUNT(DISTINCT d.id) AS registros_capturados,
+        COALESCE(SUM(d.cantidad), 0) AS unidades_capturadas
+      FROM inventarios i
+      INNER JOIN sucursales s ON s.id = i.sucursal_id
+      LEFT JOIN inventario_detalle d ON d.inventario_id = i.id
+      WHERE i.sucursal_id = ? AND i.estado = 'abierto'
+      GROUP BY i.id, i.sucursal_id, i.fecha, i.created_at, i.updated_at, i.estado, i.external_id, i.nombre, i.origen, s.nombre
+      ORDER BY i.created_at DESC, i.id DESC
+    `,
+    [sucursalId]
+  )
+  return rows
+}
+
+async function deleteOpenById(inventarioId) {
+  const connection = await db.getConnection()
+  try {
+    await connection.beginTransaction()
+    await connection.execute('DELETE FROM inventario_detalle WHERE inventario_id = ?', [inventarioId])
+    const [result] = await connection.execute("DELETE FROM inventarios WHERE id = ? AND estado <> 'cerrado'", [inventarioId])
+    await connection.commit()
+    return result.affectedRows || 0
+  } catch (error) {
+    try {
+      await connection.rollback()
+    } catch (rollbackError) {
+      console.error('No se pudo revertir la eliminacion del inventario:', rollbackError.message)
+    }
+    throw error
+  } finally {
+    connection.release()
+  }
+}
+
 async function getDashboardSummary(user, filters) {
   const scoped = applyFilters(user, filters)
   const [rows] = await db.query(
@@ -223,6 +272,8 @@ module.exports = {
   createFromMobile,
   updateFromMobile,
   close,
+  listOpenBySucursal,
+  deleteOpenById,
   listForDashboard,
   getDashboardSummary
 }

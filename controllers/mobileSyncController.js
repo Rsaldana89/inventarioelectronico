@@ -55,7 +55,7 @@ async function syncInventory(req, res, next) {
     }
 
     const fecha = toSqlDate(inventoryPayload.createdAt)
-    const safeName = String(inventoryPayload.name || '').trim() || 'Inventario ' + sucursal.nombre
+    const safeName = buildDescriptiveInventoryName(inventoryPayload.name, sucursal.nombre, inventoryPayload.createdAt)
 
     let inventarioId = existing ? Number(existing.id) : null
 
@@ -116,6 +116,31 @@ async function syncInventory(req, res, next) {
       connection.release()
     }
   }
+}
+
+
+function buildDescriptiveInventoryName(providedName, branchName, createdAt) {
+  const rawName = String(providedName || '').trim()
+  const cleanBranch = String(branchName || '').trim() || 'Sucursal'
+  const timestamp = Number(createdAt)
+  const date = Number.isFinite(timestamp) && timestamp > 0 ? new Date(timestamp) : new Date()
+  const safeDate = Number.isNaN(date.getTime()) ? new Date() : date
+  const yyyy = safeDate.getFullYear()
+  const mm = String(safeDate.getMonth() + 1).padStart(2, '0')
+  const dd = String(safeDate.getDate()).padStart(2, '0')
+  const hh = String(safeDate.getHours()).padStart(2, '0')
+  const mi = String(safeDate.getMinutes()).padStart(2, '0')
+  const descriptiveName = `Inventario ${cleanBranch} ${yyyy}-${mm}-${dd} ${hh}:${mi}`
+
+  if (!rawName || /^inventario\s*$/i.test(rawName) || rawName.toLowerCase() === ('inventario ' + cleanBranch).toLowerCase()) {
+    return descriptiveName
+  }
+
+  if (!rawName.toLowerCase().includes(cleanBranch.toLowerCase())) {
+    return `${rawName} - ${cleanBranch} ${yyyy}-${mm}-${dd} ${hh}:${mi}`
+  }
+
+  return rawName
 }
 
 function normalizeItems(items) {

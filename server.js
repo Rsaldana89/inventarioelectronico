@@ -123,6 +123,8 @@ function isApiRequest(req) {
   return (
     pathName === '/catalog' ||
     pathName === '/inventories/sync' ||
+    pathName === '/inventories/open' ||
+    pathName.startsWith('/inventories/') ||
     pathName.startsWith('/auth/') ||
     String(req.headers.accept || '').includes('application/json')
   )
