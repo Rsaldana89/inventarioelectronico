@@ -1,5 +1,11 @@
 require('dotenv').config()
 
+// Establecer huso horario para todo el proceso Node.  Con esto,
+// Date.now() y new Date() utilizarán la zona especificada.  Por
+// defecto usamos America/Mexico_City (UTC-6), pero se puede
+// sobreescribir con la variable APP_TIMEZONE en .env.
+process.env.TZ = process.env.APP_TIMEZONE || 'America/Mexico_City';
+
 const fs = require('fs')
 const path = require('path')
 const express = require('express')
@@ -8,9 +14,12 @@ const db = require('./db')
 const { injectLocals } = require('./middlewares/auth')
 
 const mobileApiRoutes = require('./routes/mobileApiRoutes')
+const userRoutes = require('./routes/userRoutes')
+const { syncUsers } = require('./services/userSync')
 const authRoutes = require('./routes/authRoutes')
 const dashboardRoutes = require('./routes/dashboardRoutes')
 const existenciasRoutes = require('./routes/existenciasRoutes')
+const proformaRoutes = require('./routes/proformaRoutes')
 const inventarioRoutes = require('./routes/inventarioRoutes')
 
 const app = express()
@@ -88,7 +97,9 @@ app.use('/', mobileApiRoutes)
 app.use('/', authRoutes)
 app.use('/', dashboardRoutes)
 app.use('/', existenciasRoutes)
+app.use('/', proformaRoutes)
 app.use('/', inventarioRoutes)
+app.use('/', userRoutes)
 
 app.use(function notFound(req, res) {
   if (isApiRequest(req)) {
@@ -140,6 +151,24 @@ async function bootstrap() {
   } catch (error) {
     console.error('No se pudo validar la conexion a MySQL al iniciar:', error.message)
   }
+
+  // Ejecutar sincronización inicial y programar sincronizaciones cada 3 días (259200000 ms).
+  try {
+    await syncUsers();
+    console.log('Sincronización inicial de usuarios completada.');
+  } catch (err) {
+    console.error('Error durante la sincronización inicial de usuarios:', err.message);
+  }
+  // Intervalo de 3 días en milisegundos.
+  const intervalMs = 3 * 24 * 60 * 60 * 1000;
+  setInterval(async () => {
+    try {
+      const result = await syncUsers();
+      console.log(`Sincronización periódica completada: ${result.inserted} nuevos usuarios, ${result.updated} contraseñas actualizadas.`);
+    } catch (err) {
+      console.error('Error durante la sincronización periódica de usuarios:', err.message);
+    }
+  }, intervalMs);
 
   app.listen(port, function onListening() {
     console.log('Servidor escuchando en http://localhost:' + port)

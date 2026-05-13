@@ -1,7 +1,9 @@
 const db = require('../db');
 const { chunkArray } = require('../utils/common');
 
-const VALID_SKU_SQL = "codigo REGEXP '^[0-9]+$' AND CAST(codigo AS UNSIGNED) BETWEEN 1100000 AND 2200000";
+// Valid SKUs must fall within the new allowed range of 1101001 to 9905007.  This constant is
+// interpolated into raw SQL strings, so take care when changing it.
+const VALID_SKU_SQL = "codigo REGEXP '^[0-9]+$' AND CAST(codigo AS UNSIGNED) BETWEEN 1101001 AND 9905007";
 
 async function replaceForSucursal(sucursalId, rows, options) {
   const connection = await db.getConnection();

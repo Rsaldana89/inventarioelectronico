@@ -1,0 +1,106 @@
+<%- include('partials/header', { title: title }) %>
+
+<section class="page-header">
+  <div>
+    <span class="section-kicker section-kicker-stock">Proforma</span>
+    <h1>Cargar proforma</h1>
+    <p class="muted">Sube un archivo XLS/XLSX con los productos y las cantidades esperadas de cada sucursal (positivas o negativas). El campo "En stock" debe tener valores positivos o negativos; los ceros serán omitidos.</p>
+  </div>
+</section>
+
+<section class="card section-card section-card-stock">
+  <div class="card-heading">
+    <div>
+      <h2>Importar proforma</h2>
+    </div>
+    <span class="heading-icon stock-icon">📥</span>
+  </div>
+  <form method="post" action="/upload-proforma" enctype="multipart/form-data" class="form-grid compact-grid">
+    <label>
+      Fecha de proforma
+      <!-- Preseleccionar la fecha actual para facilitar la carga -->
+      <input type="date" name="fecha_proforma" value="<%= today %>" required>
+    </label>
+    <label>
+      Archivo XLS / XLSX
+      <input type="file" name="archivo" accept=".xls,.xlsx" required>
+    </label>
+    <button type="submit" class="btn btn-secondary btn-stock-primary"><span class="btn-icon">⇪</span><span>Cargar proforma</span></button>
+  </form>
+  <p class="muted small">Se omitirán los productos con cantidad 0 y los SKU fuera de rango (1101001 a 9905007).</p>
+</section>
+
+<section class="card section-card section-card-stock">
+  <div class="card-heading">
+    <div>
+      <h2>Proformas cargadas</h2>
+    </div>
+    <span class="heading-icon stock-icon">📄</span>
+  </div>
+  <div class="table-responsive">
+    <!-- Checkbox to toggle visibility of old proformas -->
+    <div class="form-switch" style="margin-bottom: 0.5rem;">
+      <label class="small">
+        <input type="checkbox" id="toggle-old-proformas">
+        <span>Mostrar proformas anteriores</span>
+      </label>
+    </div>
+    <table class="data-table" id="proformasTable">
+      <thead><tr><th>ID corte</th><th>Almacén</th><th>Fecha de proforma</th><th>Fecha y hora de carga</th><th>Acción</th></tr></thead>
+      <tbody>
+        <% if (!cargas || !cargas.length) { %>
+          <tr><td colspan="5" class="empty-cell">Aún no se han cargado proformas.</td></tr>
+        <% } %>
+        <% (cargas || []).forEach(function eachCarga(carga) { %>
+          <tr class="<%= carga.isLatest ? '' : 'old-proforma' %>" style="<%= carga.isLatest ? '' : 'display:none' %>">
+            <td><%= carga.id %></td>
+            <td><%= String(carga.sucursal_id).padStart(3, '0') %> - <%= carga.sucursal_nombre %></td>
+            <td><%= formatDate(carga.fecha_proforma) %></td>
+            <td><%= formatDateTime(carga.created_at) %></td>
+            <td>
+              <a class="btn btn-secondary btn-sm" href="/proforma/download/<%= carga.id %>"><span class="btn-icon">⇩</span><span>Descargar</span></a>
+              <a class="btn btn-secondary btn-sm" href="/proforma/imprimir/<%= carga.id %>?mode=empty" style="margin-left:0.25rem;"><span class="btn-icon">🖨️</span><span>Imprimir vacía</span></a>
+              <a class="btn btn-secondary btn-sm" href="/proforma/imprimir/<%= carga.id %>?mode=filled" style="margin-left:0.25rem;"><span class="btn-icon">🖨️</span><span>Imprimir rellena</span></a>
+            <form method="post" action="/proforma/delete/<%= carga.id %>" style="display:inline;margin-left:0.25rem;">
+              <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('¿Deseas eliminar esta proforma?');"><span class="btn-icon">🗑️</span><span>Eliminar</span></button>
+            </form>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="card section-card section-card-stock">
+  <div class="card-heading">
+    <div>
+      <h2>Catálogo de productos</h2>
+      <p class="muted small">Consulta o descarga el listado único de artículos.</p>
+    </div>
+    <span class="heading-icon stock-icon">📦</span>
+  </div>
+  <div class="store-action-stack">
+    <a class="btn btn-stock-primary" href="/proforma/catalogo"><span class="btn-icon">📋</span><span>Ver catálogo</span></a>
+    <a class="btn btn-secondary" href="/proforma/catalogo/download"><span class="btn-icon">⇩</span><span>Descargar catálogo</span></a>
+  </div>
+</section>
+
+<!-- Script to toggle display of old proformas -->
+<script>
+  (function() {
+    var toggle = document.getElementById('toggle-old-proformas');
+    if (!toggle) return;
+    function updateVisibility() {
+      var showOld = toggle.checked;
+      document.querySelectorAll('#proformasTable .old-proforma').forEach(function(row) {
+        row.style.display = showOld ? '' : 'none';
+      });
+    }
+    toggle.addEventListener('change', updateVisibility);
+    // Hide old proformas by default on page load
+    updateVisibility();
+  })();
+</script>
+
+<%- include('partials/footer') %>

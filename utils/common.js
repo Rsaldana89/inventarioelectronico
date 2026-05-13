@@ -54,7 +54,10 @@ function isValidInventorySku(value) {
     return false;
   }
   const numeric = Number(sku);
-  return numeric >= 1100000 && numeric <= 2200000;
+  // The valid SKU range has been expanded to accommodate the full product catalog
+  // supplied by the new proforma workflow.  Only numeric SKUs between 1101001
+  // and 9905007 (inclusive) are considered valid for inventory operations.
+  return numeric >= 1101001 && numeric <= 9905007;
 }
 
 function buildPagination(totalItems, currentPage, pageSize) {

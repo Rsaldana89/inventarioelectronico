@@ -1,4 +1,4 @@
-﻿:root {
+:root {
   /*
    * Color and spacing variables for the UI.  These have been adjusted to move
    * the overall look away from a “rounded SaaS” feel towards a more utilitarian
@@ -170,6 +170,41 @@ a { color: inherit; text-decoration: none; }
   /* Remove heavy drop shadow; emphasise border for a grounded panel */
   box-shadow: none;
   margin-bottom: 22px;
+}
+
+/* Estilos para la gestión de usuarios */
+.user-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  background: var(--card);
+}
+.user-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 6px;
+}
+.user-name {
+  font-size: 1.05rem;
+  color: var(--heading);
+}
+.user-sucursal {
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+.user-role-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.user-role-form select {
+  min-width: 100px;
+  padding: 4px 8px;
 }
 .section-card { position: relative; overflow: hidden; }
 .section-card::before {
@@ -759,3 +794,125 @@ input:focus, select:focus {
 }
 
 
+
+
+/* Pantalla de administración de usuarios agrupada por rol */
+.users-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin: 18px 0 22px;
+}
+
+.users-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.users-summary-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #fff;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.users-summary-item strong {
+  color: var(--heading);
+}
+
+.users-section {
+  margin-bottom: 24px;
+  padding: 0;
+  overflow: hidden;
+}
+
+.users-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--border);
+  background: #fff;
+}
+
+.users-section-header h2 {
+  margin: 0 0 4px;
+  color: var(--heading);
+}
+
+.users-section-header p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.users-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  background: #f3efea;
+  border: 1px solid var(--border);
+  color: var(--heading);
+  font-weight: 800;
+}
+
+.users-table th,
+.users-table td {
+  white-space: nowrap;
+}
+
+.users-inline-form {
+  margin: 0;
+}
+
+.users-inline-form select {
+  min-width: 130px;
+  padding: 7px 9px;
+}
+
+.role-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  border: 1px solid var(--border);
+  background: #fff;
+}
+
+.role-admin {
+  color: #7a1f24;
+  background: #f8eeee;
+}
+
+.role-manager {
+  color: #7c2d12;
+  background: #fff3e6;
+}
+
+.role-user {
+  color: #1d4ed8;
+  background: #eef4ff;
+}
+
+.role-sucursal {
+  color: #047857;
+  background: #ecfdf3;
+}
+
+.muted {
+  color: var(--muted);
+  padding: 0 20px 18px;
+}

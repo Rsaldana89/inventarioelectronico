@@ -32,8 +32,39 @@ async function getById(id) {
   return rows[0] || null;
 }
 
+/**
+ * Delete a proforma (existencia carga) by its ID.  When a proforma is
+ * deleted the database will cascade-delete associated rows in
+ * `existencias_detalle` and nullify any references from
+ * `inventarios.existencia_carga_id` via foreign key constraints.  This
+ * helper wraps the deletion in a transaction to ensure the operation
+ * completes atomically.
+ *
+ * @param {number} id The ID of the proforma to delete.
+ * @returns {Promise<number>} Number of rows removed from existencias_cargas.
+ */
+async function deleteById(id) {
+  const connection = await db.getConnection();
+  try {
+    await connection.beginTransaction();
+    const [result] = await connection.execute('DELETE FROM existencias_cargas WHERE id = ?', [id]);
+    await connection.commit();
+    return result.affectedRows || 0;
+  } catch (error) {
+    try {
+      await connection.rollback();
+    } catch (rollbackError) {
+      console.error('No se pudo revertir la eliminación de la proforma:', rollbackError.message);
+    }
+    throw error;
+  } finally {
+    connection.release();
+  }
+}
+
 module.exports = {
   create,
   listBySucursal,
-  getById
+  getById,
+  deleteById
 };

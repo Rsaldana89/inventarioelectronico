@@ -1,0 +1,43 @@
+<%- include('partials/header', { title: title }) %>
+
+<section class="page-header">
+  <div>
+    <span class="section-kicker section-kicker-stock">Catálogo</span>
+    <h1>Catálogo de productos</h1>
+    <p class="muted">Lista de artículos únicos cargados a partir de proformas. Puedes descargar la lista en formato Excel o revisarla directamente aquí.</p>
+  </div>
+  <div class="page-header-actions">
+    <a class="btn btn-secondary" href="/proforma"><span class="btn-icon">←</span><span>Volver a proformas</span></a>
+    <a class="btn btn-stock-primary" href="/proforma/catalogo/download"><span class="btn-icon">⇩</span><span>Descargar XLS</span></a>
+  </div>
+</section>
+
+<section class="card section-card section-card-stock">
+  <div class="card-heading">
+    <div>
+      <h2>Productos actuales</h2>
+    </div>
+    <span class="heading-icon stock-icon">📦</span>
+  </div>
+  <div class="table-responsive">
+    <table class="data-table">
+      <thead>
+        <tr><th>SKU</th><th>Código de barras</th><th>Descripción</th></tr>
+      </thead>
+      <tbody>
+        <% if (!productos || !productos.length) { %>
+          <tr><td colspan="3" class="empty-cell">No hay productos cargados.</td></tr>
+        <% } %>
+        <% (productos || []).forEach(function eachProducto(item) { %>
+          <tr>
+            <td><%= item.codigo %></td>
+            <td><%= item.barcode && item.barcode.trim() ? item.barcode : item.codigo %></td>
+            <td><%= item.descripcion %></td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<%- include('partials/footer') %>

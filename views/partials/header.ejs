@@ -28,17 +28,22 @@
               <span class="nav-icon">🧾</span>
               <span>Inventarios</span>
             </a>
+            <!-- Link to proforma management is only visible for admin/manager -->
+            <a class="nav-link nav-link-stock <%= currentPath === '/proforma' ? 'active' : '' %>" href="/proforma">
+              <span class="nav-icon">📦</span>
+              <span>Proformas</span>
+            </a>
+            <!-- Enlace para gestionar usuarios, visible solo para admin/manager -->
+            <a class="nav-link nav-link-users <%= currentPath.startsWith('/admin/users') ? 'active' : '' %>" href="/admin/users">
+              <span class="nav-icon">👥</span>
+              <span>Usuarios</span>
+            </a>
           <% } else { %>
             <a class="nav-link nav-link-home <%= countIsActive ? 'active' : '' %>" href="/dashboard">
               <span class="nav-icon">🧾</span>
               <span>Contar</span>
             </a>
           <% } %>
-
-          <a class="nav-link nav-link-stock <%= currentPath === '/existencias' ? 'active' : '' %>" href="/existencias">
-            <span class="nav-icon">📦</span>
-            <span>Existencias</span>
-          </a>
         </nav>
 
         <div class="topbar-user">

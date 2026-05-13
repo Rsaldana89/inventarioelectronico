@@ -7,6 +7,33 @@ document.addEventListener('DOMContentLoaded', function onReady() {
     }
   }
 
+
+  function enforceSkuDefaultForExports() {
+    document.querySelectorAll('.export-options-form').forEach(function eachExportForm(form) {
+      form.setAttribute('autocomplete', 'off');
+      var skuRadio = form.querySelector('input[name="tipo"][value="sku"]');
+      var barcodeRadio = form.querySelector('input[name="tipo"][value="barcode"]');
+      if (skuRadio) {
+        skuRadio.checked = true;
+        skuRadio.defaultChecked = true;
+        skuRadio.setAttribute('autocomplete', 'off');
+      }
+      if (barcodeRadio) {
+        barcodeRadio.checked = false;
+        barcodeRadio.defaultChecked = false;
+        barcodeRadio.setAttribute('autocomplete', 'off');
+      }
+      form.addEventListener('submit', function onExportSubmit() {
+        var selected = form.querySelector('input[name="tipo"]:checked');
+        if (!selected && skuRadio) {
+          skuRadio.checked = true;
+        }
+      });
+    });
+  }
+
+  enforceSkuDefaultForExports();
+
   document.querySelectorAll('form[data-confirm]').forEach(function bindConfirm(form) {
     form.addEventListener('submit', function onSubmit(event) {
       var message = form.getAttribute('data-confirm') || '¿Continuar?';

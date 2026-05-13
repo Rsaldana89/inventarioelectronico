@@ -12,7 +12,12 @@ const pool = mysql.createPool({
   connectionLimit: Number(process.env.DB_CONNECTION_LIMIT || 10),
   queueLimit: 0,
   charset: 'utf8mb4',
-  decimalNumbers: true
+  decimalNumbers: true,
+  // Forzar la zona horaria a UTC-6 (Ciudad de México) para que las
+  // fechas y horas se guarden y se lean con el horario local.  Si se
+  // establece DB_TIMEZONE en el .env, se usa ese valor.
+  timezone: process.env.DB_TIMEZONE || '-06:00',
+  dateStrings: true
 });
 
 module.exports = pool;

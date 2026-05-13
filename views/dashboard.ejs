@@ -10,10 +10,13 @@
     <div>
       <span class="section-kicker section-kicker-home">Conteo para sucursal</span>
       <h1>Contar inventario</h1>
-      <p class="muted">Entra, crea el inventario y empieza a capturar. Si necesitas una base, primero carga existencias.</p>
+      <p class="muted">Entra, crea el inventario y empieza a capturar. Si necesitas una base, administración deberá haber cargado la proforma del mes.</p>
     </div>
     <div class="page-header-actions">
-      <a class="btn btn-stock" href="/existencias"><span class="btn-icon">📥</span><span>Cargar existencias</span></a>
+      <!-- Para sucursales, se oculta la carga de proformas.  Solo se permite imprimir si existe una -->
+      <% if ((cargasExistencia || []).length) { %>
+        <a class="btn btn-secondary" href="/proforma/imprimir"><span class="btn-icon">🖨️</span><span>Imprimir proforma</span></a>
+      <% } %>
       <% if (openInventario) { %>
         <a class="btn btn-primary" href="/inventarios/<%= openInventario.id %>"><span class="btn-icon">▶</span><span>Continuar conteo</span></a>
       <% } %>
@@ -44,13 +47,14 @@
             <p class="muted small">
               <%= openInventario.sucursal_nombre %> ·
               Creado <%= formatDateTime(openInventario.created_at) %> ·
-              <%= ['con_existencia', 'con_existencias'].includes(openInventario.origen_existencias) ? 'Con existencias' : 'Conteo libre' %>
+              <%= ['con_existencia', 'con_existencias'].includes(openInventario.origen_existencias) ? 'Con proforma' : 'Conteo libre' %>
             </p>
           </div>
           <span class="pill pill-open">abierto</span>
         </div>
         <div class="store-action-stack">
           <a class="btn btn-primary btn-lg" href="/inventarios/<%= openInventario.id %>"><span class="btn-icon">▶</span><span>Continuar inventario</span></a>
+          <a class="btn btn-secondary" href="/inventarios/<%= openInventario.id %>/imprimir?tipo=sku" target="_blank"><span class="btn-icon">🖨️</span><span>Imprimir inventario</span></a>
           <a class="btn btn-secondary" href="#crear-nuevo"><span class="btn-icon">＋</span><span>Crear otro inventario</span></a>
         </div>
       <% } %>
@@ -61,46 +65,53 @@
           <input type="date" name="fecha" value="<%= new Date().toISOString().slice(0, 10) %>" required>
         </label>
 
-        <label>
-          Tipo de conteo
-          <select name="origen_existencias" id="origen_existencias" data-origen-select>
-            <option value="sin_existencias">Conteo libre, sin existencias</option>
-            <option value="con_existencia">Basado en existencias cargadas</option>
-          </select>
-        </label>
+          <label>
+            Tipo de conteo
+            <select name="origen_existencias" id="origen_existencias" data-origen-select>
+              <% var tieneProforma = hasProformaThisMonth; %>
+              <option value="sin_existencias" <%= tieneProforma ? '' : 'selected' %>>Conteo libre, sin proforma</option>
+              <option value="con_existencia" <%= tieneProforma ? 'selected' : '' %>>Basado en proforma cargada</option>
+            </select>
+          </label>
 
         <label data-existencia-wrapper>
-          Fecha de existencias
+          Fecha de proforma
           <select name="existencia_carga_id" id="existencia_carga_id" data-existencia-select>
-            <option value="">Selecciona una fecha</option>
-            <% (cargasExistencia || []).forEach(function(carga) { %>
-              <option value="<%= carga.id %>">Existencias cargadas <%= formatDateTime(carga.created_at) %></option>
+            <option value="">Selecciona la proforma</option>
+            <% (cargasExistencia || []).forEach(function(carga, idx) { %>
+              <option value="<%= carga.id %>" <%= idx === 0 ? 'selected' : '' %>>Proforma cargada <%= formatDateTime(carga.created_at) %></option>
             <% }) %>
           </select>
         </label>
 
-        <button type="submit" class="btn btn-primary btn-primary-cta btn-lg"><span class="btn-icon">▶</span><span>Crear y empezar a contar</span></button>
+        <% if (hasProformaThisMonth) { %>
+          <button type="submit" class="btn btn-primary btn-primary-cta btn-lg"><span class="btn-icon">▶</span><span>Crear y empezar a contar</span></button>
+        <% } else { %>
+          <button type="button" class="btn btn-primary btn-primary-cta btn-lg" disabled><span class="btn-icon">🚫</span><span>Crear y empezar a contar</span></button>
+          <p class="muted small">No hay proforma cargada este mes. Espera a que administración la cargue.</p>
+        <% } %>
       </form>
     </article>
-
+    <!-- Se oculta la sección de carga de proforma para sucursales -->
+    <% /* Mostrar un recuadro informativo para sucursales sobre la proforma del mes */ %>
     <article class="card section-card section-card-stock store-secondary-card">
       <div class="card-heading">
         <div>
-          <span class="section-kicker section-kicker-stock">Apoyo</span>
-          <h2>Cargar existencias</h2>
-          <p class="muted small">Úsalo cuando quieras iniciar el conteo con una base de existencia por sucursal y fecha.</p>
+          <span class="section-kicker section-kicker-stock">Base de existencias</span>
+          <h2>Proforma del mes</h2>
+          <% if (hasProformaThisMonth) { %>
+            <p class="muted small">Hay una proforma cargada para este mes. Puedes imprimirla para utilizarla como referencia al contar.</p>
+          <% } else { %>
+            <p class="muted small">No hay una proforma cargada para este mes todavía. Comunícate con administración para que la cargue.</p>
+          <% } %>
         </div>
         <span class="heading-icon stock-icon">📦</span>
       </div>
-      <div class="store-action-stack">
-        <a class="btn btn-stock-primary btn-lg" href="/existencias"><span class="btn-icon">📥</span><span>Ir a existencias</span></a>
-        <div class="hint compact-hint">
-          <strong>Flujo recomendado</strong>
-          <span>1. Cargar existencias</span>
-          <span>2. Crear inventario</span>
-          <span>3. Escanear y guardar</span>
+      <% if (hasProformaThisMonth && (cargasExistencia || []).length) { %>
+        <div class="store-action-stack">
+          <a class="btn btn-secondary" href="/proforma/imprimir"><span class="btn-icon">🖨️</span><span>Imprimir proforma</span></a>
         </div>
-      </div>
+      <% } %>
     </article>
   </section>
 
@@ -132,11 +143,16 @@
               <td>#<%= inventario.id %></td>
               <td><%= formatDateTime(inventario.created_at) %></td>
               <td><%= formatDate(inventario.fecha) %></td>
-              <td><%= ['con_existencia', 'con_existencias'].includes(inventario.origen_existencias) ? 'Con existencias' : 'Libre' %></td>
+              <td><%= ['con_existencia', 'con_existencias'].includes(inventario.origen_existencias) ? 'Con proforma' : 'Libre' %></td>
               <td><span class="pill <%= inventario.estado === 'abierto' ? 'pill-open' : 'pill-closed' %>"><%= inventario.estado %></span></td>
               <td><%= inventario.registros_capturados %></td>
               <td><%= formatQty(inventario.unidades_capturadas) %></td>
-              <td><a class="btn btn-secondary btn-sm" href="/inventarios/<%= inventario.id %>"><span class="btn-icon">→</span><span>Abrir</span></a></td>
+              <td>
+                <div class="actions-row">
+                  <a class="btn btn-secondary btn-sm" href="/inventarios/<%= inventario.id %>"><span class="btn-icon">→</span><span>Abrir</span></a>
+                  <a class="btn btn-secondary btn-sm" href="/inventarios/<%= inventario.id %>/imprimir?tipo=sku" target="_blank"><span class="btn-icon">🖨️</span><span>Imprimir</span></a>
+                </div>
+              </td>
             </tr>
           <% }) %>
         </tbody>
@@ -148,7 +164,7 @@
     <div>
       <span class="section-kicker section-kicker-home">Panel principal</span>
       <h1>Inicio</h1>
-      <p class="muted">Elige una acción. Desde aquí puedes contar, consultar, cargar existencias y concentrar la operación del sistema.</p>
+      <p class="muted">Elige una acción. Desde aquí puedes contar, consultar, cargar proformas y concentrar la operación del sistema.</p>
     </div>
   </section>
 
@@ -163,10 +179,10 @@
       <strong>Consultar inventarios</strong>
       <p>Filtrar, revisar estados y abrir conteos existentes.</p>
     </a>
-    <a class="card action-card action-card-stock" href="/existencias">
+    <a class="card action-card action-card-stock" href="/proforma">
       <span class="action-icon">📥</span>
-      <strong>Cargar existencias</strong>
-      <p>Subir cortes por sucursal para usarlos como base.</p>
+      <strong>Cargar proforma</strong>
+      <p>Subir archivos por sucursal para usarlos como base.</p>
     </a>
     <a class="card action-card action-card-admin" href="#administracion-panel">
       <span class="action-icon">⚙</span>
@@ -210,24 +226,25 @@
         <label>
           Tipo de conteo
           <select name="origen_existencias" id="origen_existencias" data-origen-select>
-            <option value="sin_existencias">Conteo libre</option>
-            <option value="con_existencia">Basado en existencias</option>
+            <% var tieneProformaCtrl = (cargasExistencia || []).length > 0; %>
+            <option value="sin_existencias" <%= tieneProformaCtrl ? '' : 'selected' %>>Conteo libre</option>
+            <option value="con_existencia" <%= tieneProformaCtrl ? 'selected' : '' %>>Basado en proforma</option>
           </select>
         </label>
 
         <label data-existencia-wrapper>
-          Fecha de existencias
+          Proforma
           <select name="existencia_carga_id" id="existencia_carga_id" data-existencia-select>
-            <option value="">Selecciona una fecha</option>
-            <% (cargasExistencia || []).forEach(function(carga) { %>
-              <option value="<%= carga.id %>">#<%= carga.id %> · Cargado <%= formatDateTime(carga.created_at) %></option>
+            <option value="">Selecciona la proforma</option>
+            <% (cargasExistencia || []).forEach(function(carga, idx) { %>
+              <option value="<%= carga.id %>" <%= idx === 0 ? 'selected' : '' %>>#<%= carga.id %> · Cargada <%= formatDateTime(carga.created_at) %></option>
             <% }) %>
           </select>
         </label>
 
         <button type="submit" class="btn btn-primary"><span class="btn-icon">▶</span><span>Crear inventario</span></button>
       </form>
-      <p class="muted small">La fecha de existencias solo se activa cuando el conteo es basado en existencias.</p>
+      <p class="muted small">La proforma solo se activa cuando el conteo es basado en proforma.</p>
     </article>
 
     <article class="card section-card section-card-home" id="administracion-panel">
@@ -254,11 +271,11 @@
       </div>
       <div class="admin-shortcuts">
         <a class="btn btn-secondary" href="#inventarios-panel"><span class="btn-icon">🔎</span><span>Ir a consulta</span></a>
-        <a class="btn btn-stock" href="/existencias"><span class="btn-icon">📥</span><span>Ir a existencias</span></a>
+        <a class="btn btn-stock" href="/proforma"><span class="btn-icon">📥</span><span>Ir a proformas</span></a>
       </div>
       <div class="hint compact-hint">
         <strong>Flujo sugerido</strong>
-        <span>1. Cargar existencias</span>
+        <span>1. Cargar proforma</span>
         <span>2. Crear inventario</span>
         <span>3. Abrir y contar</span>
         <span>4. Consultar resultados</span>
@@ -307,11 +324,16 @@
               <td><%= formatDateTime(inventario.created_at) %></td>
               <td><%= formatDate(inventario.fecha) %></td>
               <td><%= inventario.sucursal_nombre %></td>
-              <td><%= ['con_existencia', 'con_existencias'].includes(inventario.origen_existencias) ? 'Con existencias' : 'Sin existencias' %></td>
+              <td><%= ['con_existencia', 'con_existencias'].includes(inventario.origen_existencias) ? 'Con proforma' : 'Sin proforma' %></td>
               <td><span class="pill <%= inventario.estado === 'abierto' ? 'pill-open' : 'pill-closed' %>"><%= inventario.estado %></span></td>
               <td><%= inventario.registros_capturados %></td>
               <td><%= formatQty(inventario.unidades_capturadas) %></td>
-              <td><a class="btn btn-secondary btn-sm" href="/inventarios/<%= inventario.id %>"><span class="btn-icon">→</span><span>Abrir</span></a></td>
+              <td>
+                <div class="actions-row">
+                  <a class="btn btn-secondary btn-sm" href="/inventarios/<%= inventario.id %>"><span class="btn-icon">→</span><span>Abrir</span></a>
+                  <a class="btn btn-secondary btn-sm" href="/inventarios/<%= inventario.id %>/imprimir?tipo=sku" target="_blank"><span class="btn-icon">🖨️</span><span>Imprimir</span></a>
+                </div>
+              </td>
             </tr>
           <% }) %>
         </tbody>

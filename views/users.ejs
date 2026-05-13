@@ -1,0 +1,122 @@
+<%- include('partials/header', { title: title }) %>
+
+<h1>Administración de usuarios</h1>
+
+<p>
+  En esta sección puedes ver los usuarios existentes, cambiar su rol entre
+  <code>admin</code>, <code>manager</code>, <code>user</code> y <code>sucursal</code>,
+  y sincronizar usuarios desde la base de soporte 360. Para crear usuarios nuevos se debe usar
+  el sistema de soporte 360 y luego sincronizar aquí.
+</p>
+
+<%
+  const roleSections = [
+    { key: 'admin', title: 'Administradores', description: 'Usuarios con acceso completo al sistema.' },
+    { key: 'manager', title: 'Managers', description: 'Usuarios administrativos o encargados con permisos ampliados.' },
+    { key: 'user', title: 'Usuarios generales', description: 'Usuarios que no están ligados a una sucursal.' },
+    { key: 'sucursal', title: 'Sucursales', description: 'Usuarios de tiendas, asociados a una sucursal.' }
+  ];
+
+  const groupedUsers = {
+    admin: [],
+    manager: [],
+    user: [],
+    sucursal: []
+  };
+
+  users.forEach(function(u) {
+    const role = groupedUsers[u.rol] ? u.rol : 'user';
+    groupedUsers[role].push(u);
+  });
+
+  Object.keys(groupedUsers).forEach(function(role) {
+    groupedUsers[role].sort(function(a, b) {
+      return String(a.username || '').localeCompare(String(b.username || ''), 'es', { numeric: true });
+    });
+  });
+
+  function roleLabel(role) {
+    const labels = {
+      admin: 'admin',
+      manager: 'manager',
+      user: 'user',
+      sucursal: 'sucursal'
+    };
+    return labels[role] || role;
+  }
+%>
+
+<div class="users-toolbar">
+  <form action="/admin/users/sync" method="post">
+    <button type="submit" class="btn btn-primary">Sincronizar usuarios</button>
+  </form>
+
+  <div class="users-summary">
+    <% roleSections.forEach(function(section) { %>
+      <span class="users-summary-item">
+        <strong><%= groupedUsers[section.key].length %></strong>
+        <%= section.title %>
+      </span>
+    <% }); %>
+  </div>
+</div>
+
+<% roleSections.forEach(function(section) { %>
+  <section class="card users-section">
+    <div class="users-section-header">
+      <div>
+        <h2><%= section.title %></h2>
+        <p><%= section.description %></p>
+      </div>
+      <span class="users-count"><%= groupedUsers[section.key].length %></span>
+    </div>
+
+    <% if (groupedUsers[section.key].length === 0) { %>
+      <p class="muted">No hay usuarios en esta categoría.</p>
+    <% } else { %>
+      <div class="table-responsive">
+        <table class="data-table users-table">
+          <thead>
+            <tr>
+              <th>Usuario</th>
+              <th>Sucursal</th>
+              <th>Rol actual</th>
+              <th>Cambiar rol</th>
+              <th>Acción</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% groupedUsers[section.key].forEach(function(u) { %>
+              <tr>
+                <td>
+                  <strong><%= u.username %></strong>
+                </td>
+                <td>
+                  <%= u.sucursal_nombre || '-' %>
+                </td>
+                <td>
+                  <span class="role-badge role-<%= u.rol %>"><%= roleLabel(u.rol) %></span>
+                </td>
+                <td>
+                  <form id="role-form-<%= u.id %>" action="/admin/users/<%= u.id %>/role" method="post" class="inline-form users-inline-form">
+                    <select name="role">
+                      <option value="admin" <%= u.rol === 'admin' ? 'selected' : '' %>>admin</option>
+                      <option value="manager" <%= u.rol === 'manager' ? 'selected' : '' %>>manager</option>
+                      <option value="user" <%= u.rol === 'user' ? 'selected' : '' %>>user</option>
+                      <option value="sucursal" <%= u.rol === 'sucursal' ? 'selected' : '' %>>sucursal</option>
+                    </select>
+                  </form>
+                </td>
+                <td>
+                  <button type="submit" form="role-form-<%= u.id %>" class="btn btn-secondary btn-sm">Actualizar</button>
+                </td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </section>
+<% }); %>
+
+<%- include('partials/footer') %>

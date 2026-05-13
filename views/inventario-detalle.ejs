@@ -6,9 +6,17 @@
       <div>
         <p class="mobile-eyebrow">Conteo móvil</p>
         <h1>Inventario #<%= inventario.id %></h1>
-        <p class="muted small"><strong><%= inventario.sucursal_nombre %></strong> · <%= inventario.estado %> · <%= usesExistencias ? 'Con existencias' : 'Conteo libre' %></p>
+        <p class="muted small">
+          <strong><%= inventario.sucursal_nombre %></strong>
+          · <%= inventario.estado %>
+          · <%= usesExistencias ? 'Basado en proforma' : 'Conteo libre' %>
+          <% if (lastProformaDate) { %>
+            · Última proforma: <%= formatDate(lastProformaDate) %>
+          <% } %>
+        </p>
       </div>
       <div class="mobile-header-actions">
+        <a class="btn btn-secondary btn-sm" href="/inventarios/<%= inventario.id %>/imprimir?tipo=sku" target="_blank"><span class="btn-icon">🖨️</span><span>Imprimir</span></a>
         <a class="btn btn-secondary btn-sm" href="/dashboard">Volver</a>
       </div>
     </div>
@@ -65,12 +73,12 @@
         <% if (usesExistencias) { %>
           <p class="muted small mobile-tip">En móvil se prioriza la captura rápida.</p>
         <% } else { %>
-          <p class="muted small mobile-tip">Conteo libre: no se muestran existencias esperadas.</p>
+          <p class="muted small mobile-tip">Conteo libre: no se muestran cantidades esperadas.</p>
         <% } %>
       </section>
     <% } else { %>
       <section class="card">
-        <p class="muted">Este inventario está cerrado. Solo puedes revisar y exportar.</p>
+      <p class="muted">Este inventario está cerrado. Solo puedes revisar y exportar.</p>
       </section>
     <% } %>
 
@@ -86,7 +94,9 @@
             </div>
             <div class="mobile-preview-badges">
               <span class="pill <%= item.estado === 'contado' ? 'pill-open' : 'pill-pending' %>"><%= item.estado %></span>
-              <span class="mobile-mini-stat">Existencia: <strong><%= formatQty(item.cantidad_esperada || 0) %></strong></span>
+              <% if (!hideExpectedQuantity) { %>
+                <span class="mobile-mini-stat">Cantidad esperada: <strong><%= formatQty(item.cantidad_esperada || 0) %></strong></span>
+              <% } %>
               <span class="mobile-mini-stat">Contado: <strong><%= formatQty(item.cantidad_contada || 0) %></strong></span>
             </div>
           </article>
@@ -96,11 +106,18 @@
 
     <section class="card mobile-export-card">
       <h2>Exportar</h2>
-      <form action="/export/<%= inventario.id %>" method="get" class="form-grid export-options-form mobile-export-form">
-        <label class="radio-option"><input type="radio" name="tipo" value="barcode" checked><span>Por código de barras</span></label>
-        <label class="radio-option"><input type="radio" name="tipo" value="sku"><span>Por SKU</span></label>
+      <form action="/export/<%= inventario.id %>" method="get" class="form-grid export-options-form mobile-export-form" autocomplete="off">
+        <label class="radio-option"><input type="radio" name="tipo" value="sku" checked autocomplete="off"><span>Por SKU</span></label>
+        <label class="radio-option"><input type="radio" name="tipo" value="barcode" autocomplete="off"><span>Por código de barras</span></label>
         <button type="submit" class="btn btn-secondary">Exportar XLS</button>
       </form>
+      <a class="btn btn-secondary" href="/inventarios/<%= inventario.id %>/imprimir?tipo=sku" target="_blank"><span class="btn-icon">🖨️</span><span>Imprimir PDF</span></a>
+      <% if (inventario.estado === 'abierto') { %>
+        <form action="/inventarios/<%= inventario.id %>/cerrar" method="post" data-confirm="Advertencia: este conteo ya no se podrá modificar ni continuar. ¿Deseas cerrar el inventario?" style="margin-top: 0.75rem;">
+          <button type="submit" class="btn btn-danger">Cerrar inventario</button>
+        </form>
+      <% } %>
+      <p class="muted small">PDF para miniprinter: SKU, descripción y cantidad contada. Por default se imprime por SKU.</p>
     </section>
 
     <section class="card mobile-captured-card">
@@ -131,7 +148,10 @@
       <p class="muted">
         <strong>Sucursal:</strong> <%= inventario.sucursal_nombre %> |
         <strong>Fecha:</strong> <%= formatDate(inventario.fecha) %> |
-        <strong>Base:</strong> <%= usesExistencias ? 'Con existencias' : 'Sin existencias' %> |
+        <strong>Base:</strong> <%= usesExistencias ? 'Con proforma' : 'Sin proforma' %> |
+        <% if (lastProformaDate) { %>
+          <strong>Última proforma:</strong> <%= formatDate(lastProformaDate) %> |
+        <% } %>
         <strong>Estado:</strong>
         <span class="pill <%= inventario.estado === 'abierto' ? 'pill-open' : 'pill-closed' %>"><%= inventario.estado %></span>
       </p>
@@ -139,9 +159,14 @@
 
     <div class="page-header-actions">
       <a class="btn btn-secondary" href="/dashboard">Volver</a>
-      <% if (inventario.estado === 'abierto') { %>
-        <form action="/inventarios/<%= inventario.id %>/cerrar" method="post" data-confirm="Se cerrara el inventario y ya no podras editarlo.">
-          <button type="submit" class="btn btn-danger">Cerrar inventario</button>
+      <% if (currentUser && (currentUser.rol === 'admin' || currentUser.rol === 'manager')) { %>
+        <% if (inventario.estado === 'abierto') { %>
+          <form action="/inventarios/<%= inventario.id %>/cerrar" method="post" data-confirm="Se cerrará el inventario y ya no podrás editarlo.">
+            <button type="submit" class="btn btn-danger">Cerrar inventario</button>
+          </form>
+        <% } %>
+        <form action="/inventarios/<%= inventario.id %>/delete" method="post" onsubmit="return confirm('¿Deseas eliminar este inventario? Esta acción no se puede deshacer.');" style="margin-left:0.5rem;">
+          <button type="submit" class="btn btn-danger">Eliminar inventario</button>
         </form>
       <% } %>
     </div>
@@ -156,18 +181,11 @@
       <article class="card stat-card"><span class="stat-label">Pendientes</span><strong class="stat-value"><%= blindSummary.pendientes || 0 %></strong></article>
     <% } else { %>
       <article class="card stat-card"><span class="stat-label">Modo</span><strong class="stat-value">Libre</strong></article>
-      <article class="card stat-card"><span class="stat-label">Base</span><strong class="stat-value">Sin existencias</strong></article>
+      <article class="card stat-card"><span class="stat-label">Base</span><strong class="stat-value">Sin proforma</strong></article>
       <article class="card stat-card"><span class="stat-label">Captura</span><strong class="stat-value">Manual</strong></article>
     <% } %>
   </section>
 
-  <% if (usesExistencias) { %>
-    <section class="cards-grid compact-summary-grid">
-      <article class="card stat-card"><span class="stat-label">Con existencia</span><strong class="stat-value"><%= blindSummary.con_existencia_distinta_cero || 0 %></strong></article>
-      <article class="card stat-card"><span class="stat-label">Con existencia 0</span><strong class="stat-value"><%= blindSummary.con_existencia_cero || 0 %></strong></article>
-      <article class="card stat-card"><span class="stat-label">Visibles con filtro</span><strong class="stat-value"><%= pagination.total || 0 %></strong></article>
-    </section>
-  <% } %>
 
   <% if (inventario.estado === 'abierto') { %>
     <section class="card store-mode-card">
@@ -236,23 +254,30 @@
 
       <article class="card">
         <h2>Exportar conteo</h2>
-        <form action="/export/<%= inventario.id %>" method="get" class="form-grid compact-grid export-options-form">
-          <label class="radio-option"><input type="radio" name="tipo" value="barcode" checked><span>Por código de barras</span></label>
-          <label class="radio-option"><input type="radio" name="tipo" value="sku"><span>Por SKU</span></label>
+        <form action="/export/<%= inventario.id %>" method="get" class="form-grid compact-grid export-options-form" autocomplete="off">
+          <label class="radio-option"><input type="radio" name="tipo" value="sku" checked autocomplete="off"><span>Por SKU</span></label>
+          <label class="radio-option"><input type="radio" name="tipo" value="barcode" autocomplete="off"><span>Por código de barras</span></label>
           <button type="submit" class="btn btn-secondary">Exportar XLS</button>
         </form>
-        <p class="muted small">Por default sale por código de barras. La exportación incluye identificador y cantidad contada.</p>
+        <a class="btn btn-secondary" href="/inventarios/<%= inventario.id %>/imprimir?tipo=sku" target="_blank"><span class="btn-icon">🖨️</span><span>Imprimir PDF</span></a>
+        <% if (inventario.estado === 'abierto') { %>
+          <form action="/inventarios/<%= inventario.id %>/cerrar" method="post" data-confirm="Advertencia: este conteo ya no se podrá modificar ni continuar. ¿Deseas cerrar el inventario?" style="margin-top: 0.75rem;">
+            <button type="submit" class="btn btn-danger">Cerrar inventario</button>
+          </form>
+        <% } %>
+        <p class="muted small">El PDF para miniprinter incluye solo SKU, descripción y cantidad contada. Por default se imprime por SKU.</p>
       </article>
     </section>
   <% } else { %>
     <section class="card">
       <h2>Exportar conteo</h2>
-      <form action="/export/<%= inventario.id %>" method="get" class="form-grid compact-grid export-options-form">
-        <label class="radio-option"><input type="radio" name="tipo" value="barcode" checked><span>Por código de barras</span></label>
-        <label class="radio-option"><input type="radio" name="tipo" value="sku"><span>Por SKU</span></label>
+      <form action="/export/<%= inventario.id %>" method="get" class="form-grid compact-grid export-options-form" autocomplete="off">
+        <label class="radio-option"><input type="radio" name="tipo" value="sku" checked autocomplete="off"><span>Por SKU</span></label>
+        <label class="radio-option"><input type="radio" name="tipo" value="barcode" autocomplete="off"><span>Por código de barras</span></label>
         <button type="submit" class="btn btn-secondary">Exportar XLS</button>
       </form>
-      <p class="muted small">Por default sale por código de barras. La exportación incluye identificador y cantidad contada.</p>
+      <a class="btn btn-secondary" href="/inventarios/<%= inventario.id %>/imprimir?tipo=sku" target="_blank"><span class="btn-icon">🖨️</span><span>Imprimir PDF</span></a>
+      <p class="muted small">El PDF para miniprinter incluye solo SKU, descripción y cantidad contada. Por default se imprime por SKU.</p>
     </section>
   <% } %>
 
@@ -260,9 +285,9 @@
     <section class="card">
       <div class="section-title">
         <div>
-          <h2>Conteo ciego basado en existencias</h2>
-          <p class="muted small">Desmarcada la casilla solo ves productos con existencia distinta de 0. Marcada la casilla también se muestran los que tienen existencia 0.</p>
-          <p class="muted small">Totales: <strong><%= blindSummary.total_esperados || 0 %></strong> artículos; con existencia: <strong><%= blindSummary.con_existencia_distinta_cero || 0 %></strong>; con existencia 0: <strong><%= blindSummary.con_existencia_cero || 0 %></strong>; visibles con el filtro actual: <strong><%= pagination.total || 0 %></strong>.</p>
+          <h2>Conteo basado en proforma</h2>
+          <p class="muted small">Desmarcando la casilla solo ves productos con cantidad esperada distinta de 0. Marcando la casilla también se muestran los que tienen cantidad esperada 0.</p>
+          <p class="muted small">Totales: <strong><%= blindSummary.total_esperados || 0 %></strong> artículos; con cantidad esperada: <strong><%= blindSummary.con_existencia_distinta_cero || 0 %></strong>; con cantidad 0: <strong><%= blindSummary.con_existencia_cero || 0 %></strong>; visibles con el filtro actual: <strong><%= pagination.total || 0 %></strong>.</p>
         </div>
 
         <form method="get" action="/inventarios/<%= inventario.id %>" class="inline-search">
@@ -270,7 +295,7 @@
           <% if (hasLoadedExistencias) { %>
             <label class="checkbox-inline">
               <input type="checkbox" name="include_zero" value="1" <%= filters.includeZero ? 'checked' : '' %>>
-              Incluir artículos con existencia 0
+              Incluir artículos con cantidad 0
             </label>
           <% } %>
           <button type="submit" class="btn btn-secondary btn-sm">Buscar</button>
@@ -285,14 +310,14 @@
               <th>Barcode</th>
               <th>Descripcion</th>
               <th>Estatus</th>
-              <th>Existencia</th>
+              <% if (!hideExpectedQuantity) { %><th>Cantidad esperada</th><% } %>
               <th>Cantidad capturada</th>
               <% if (inventario.estado === 'abierto') { %><th>Captura rápida</th><% } %>
             </tr>
           </thead>
           <tbody>
             <% if (!blindRows.length) { %>
-              <tr><td colspan="<%= inventario.estado === 'abierto' ? 7 : 6 %>" class="empty-cell">No hay productos esperados para mostrar con el filtro actual.</td></tr>
+              <tr><td colspan="<%= inventario.estado === 'abierto' ? (hideExpectedQuantity ? 6 : 7) : (hideExpectedQuantity ? 5 : 6) %>" class="empty-cell">No hay productos esperados para mostrar con el filtro actual.</td></tr>
             <% } %>
             <% blindRows.forEach(function eachBlindRow(item) { %>
               <tr>
@@ -300,7 +325,7 @@
                 <td><%= item.barcode %></td>
                 <td><%= item.descripcion || '-' %></td>
                 <td><span class="pill <%= item.estado === 'contado' ? 'pill-open' : 'pill-pending' %>"><%= item.estado %></span></td>
-                <td><%= formatQty(item.cantidad_esperada || 0) %></td>
+                <% if (!hideExpectedQuantity) { %><td><%= formatQty(item.cantidad_esperada || 0) %></td><% } %>
                 <td><%= formatQty(item.cantidad_contada) %></td>
                 <% if (inventario.estado === 'abierto') { %>
                   <td>

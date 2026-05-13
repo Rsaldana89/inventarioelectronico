@@ -17,6 +17,30 @@ async function getById(id) {
   return rows[0] || null
 }
 
+async function ensureById(id, name) {
+  const numericId = Number(id)
+  if (!numericId || Number.isNaN(numericId)) {
+    return null
+  }
+
+  const existing = await getById(numericId)
+  if (existing) {
+    return existing
+  }
+
+  const safeName = String(name || '').trim() || ('Almacen ' + numericId)
+  await db.execute(
+    `
+      INSERT INTO sucursales (id, nombre)
+      VALUES (?, ?)
+      ON DUPLICATE KEY UPDATE nombre = nombre
+    `,
+    [numericId, safeName]
+  )
+
+  return getById(numericId)
+}
+
 async function findByName(name) {
   const normalizedName = String(name || '').trim()
 
@@ -55,5 +79,6 @@ async function findByName(name) {
 module.exports = {
   getAll,
   getById,
+  ensureById,
   findByName
 }

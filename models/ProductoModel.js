@@ -62,7 +62,7 @@ async function truncateAll() {
 
 async function getLookupMaps() {
   const [rows] = await db.query(
-    'SELECT codigo, barcode, descripcion, familia FROM productos WHERE codigo REGEXP "^[0-9]+$" AND CAST(codigo AS UNSIGNED) BETWEEN 1100000 AND 2200000'
+    'SELECT codigo, barcode, descripcion, familia FROM productos WHERE codigo REGEXP "^[0-9]+$" AND CAST(codigo AS UNSIGNED) BETWEEN 1101001 AND 9905007'
   )
 
   const byCodigo = new Map()
@@ -95,7 +95,7 @@ async function findByScan(value) {
       FROM productos
       WHERE (codigo = ? OR barcode = ?)
         AND codigo REGEXP '^[0-9]+$'
-        AND CAST(codigo AS UNSIGNED) BETWEEN 1100000 AND 2200000
+        AND CAST(codigo AS UNSIGNED) BETWEEN 1101001 AND 9905007
       LIMIT 1
     `,
     [value, value]
@@ -119,7 +119,7 @@ async function listForMobileCatalog() {
         descripcion AS name
       FROM productos
       WHERE codigo REGEXP '^[0-9]+$'
-        AND CAST(codigo AS UNSIGNED) BETWEEN 1100000 AND 2200000
+        AND CAST(codigo AS UNSIGNED) BETWEEN 1101001 AND 9905007
       ORDER BY CAST(codigo AS UNSIGNED) ASC, descripcion ASC
     `
   )

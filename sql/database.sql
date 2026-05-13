@@ -14,7 +14,8 @@ CREATE TABLE IF NOT EXISTS usuarios (
   id INT AUTO_INCREMENT PRIMARY KEY,
   username VARCHAR(80) NOT NULL UNIQUE,
   password VARCHAR(255) NOT NULL,
-  rol ENUM('admin', 'sucursal') NOT NULL DEFAULT 'sucursal',
+  -- Roles permitidos: admin, manager y user. "user" reemplaza al rol "sucursal" histórico.
+  rol ENUM('admin', 'manager', 'user') NOT NULL DEFAULT 'user',
   sucursal_id INT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT fk_usuarios_sucursal
@@ -118,8 +119,8 @@ ON DUPLICATE KEY UPDATE nombre = VALUES(nombre);
 INSERT INTO usuarios (id, username, password, rol, sucursal_id)
 VALUES
   (1, 'admin', 'admin123', 'admin', NULL),
-  (2, 'naciones', 'naciones123', 'sucursal', 1),
-  (3, 'sol', 'sol123', 'sucursal', 2)
+  (2, 'naciones', 'naciones123', 'user', 1),
+  (3, 'sol', 'sol123', 'user', 2)
 ON DUPLICATE KEY UPDATE
   username = VALUES(username),
   password = VALUES(password),

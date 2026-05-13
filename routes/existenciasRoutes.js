@@ -8,10 +8,13 @@ const {
 
 const router = express.Router();
 
-router.get('/existencias', ensureAuthenticated, existenciasController.showExistencias);
+// Only admin/manager users should access the old existencias page.  The page
+// remains available for backward compatibility but is hidden from branch users.
+router.get('/existencias', ensureAuthenticated, ensureAdmin, existenciasController.showExistencias);
 router.post(
   '/upload-existencias',
   ensureAuthenticated,
+  ensureAdmin,
   upload.single('archivo'),
   existenciasController.uploadExistencias
 );

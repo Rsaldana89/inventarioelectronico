@@ -104,7 +104,15 @@ async function uploadCatalogo(req, res, next) {
     const skippedProducts = Math.max(parsedProducts.length - products.length, 0);
 
     await ProductoModel.replaceAll(products);
-    setFlash(req, 'success', 'Catalogo actualizado con ' + products.length + ' productos validos. Omitidos fuera de rango 1100000-2200000: ' + skippedProducts + '.');
+    setFlash(
+      req,
+      'success',
+      'Catalogo actualizado con ' +
+        products.length +
+        ' productos válidos. Omitidos fuera de rango 1101001-9905007: ' +
+        skippedProducts +
+        '.'
+    );
     return res.redirect('/existencias');
   } catch (error) {
     return next(error);

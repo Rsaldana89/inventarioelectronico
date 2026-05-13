@@ -22,13 +22,33 @@ async function showDashboard(req, res, next) {
       selectedSucursalId ? ExistenciaCargaModel.listBySucursal(Number(selectedSucursalId)) : Promise.resolve([])
     ]);
 
+    // Determine whether there is a proforma loaded for the current month.  This is
+    // relevant for branch users who should not create inventories without a
+    // proforma of the current month.  If there is at least one carga whose
+    // `fecha_existencia` falls within the same month/year as today, the
+    // flag will be true.
+    let hasProformaThisMonth = false;
+    if (cargasExistencia && cargasExistencia.length) {
+      const now = new Date();
+      const currentYear = now.getFullYear();
+      const currentMonth = now.getMonth(); // zero-based month
+      for (const carga of cargasExistencia) {
+        const fecha = new Date(carga.fecha_existencia);
+        if (fecha.getFullYear() === currentYear && fecha.getMonth() === currentMonth) {
+          hasProformaThisMonth = true;
+          break;
+        }
+      }
+    }
+
     return res.render('dashboard', {
       title: 'Inicio',
       inventarios,
       summary,
       filters,
       sucursales,
-      cargasExistencia
+      cargasExistencia,
+      hasProformaThisMonth
     });
   } catch (error) {
     return next(error);

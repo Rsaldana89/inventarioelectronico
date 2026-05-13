@@ -70,6 +70,7 @@ async function getById(id, executor) {
         i.external_id,
         i.nombre,
         i.origen,
+        s.codigo AS sucursal_codigo,
         s.nombre AS sucursal_nombre,
         ec.fecha_existencia
       FROM inventarios i
@@ -249,6 +250,36 @@ async function deleteOpenById(inventarioId) {
   }
 }
 
+/**
+ * Delete an inventory regardless of its status.  This helper removes
+ * captured records in `inventario_detalle` and then deletes the
+ * inventory row itself.  Administrators and managers should use this
+ * when they need to purge an inventory completely (either open or
+ * closed).
+ *
+ * @param {number} inventarioId The ID of the inventory to delete.
+ * @returns {Promise<number>} Number of inventory rows removed.
+ */
+async function deleteById(inventarioId) {
+  const connection = await db.getConnection()
+  try {
+    await connection.beginTransaction()
+    await connection.execute('DELETE FROM inventario_detalle WHERE inventario_id = ?', [inventarioId])
+    const [result] = await connection.execute('DELETE FROM inventarios WHERE id = ?', [inventarioId])
+    await connection.commit()
+    return result.affectedRows || 0
+  } catch (error) {
+    try {
+      await connection.rollback()
+    } catch (rollbackError) {
+      console.error('No se pudo revertir la eliminacion del inventario:', rollbackError.message)
+    }
+    throw error
+  } finally {
+    connection.release()
+  }
+}
+
 async function getDashboardSummary(user, filters) {
   const scoped = applyFilters(user, filters)
   const [rows] = await db.query(
@@ -275,5 +306,6 @@ module.exports = {
   listOpenBySucursal,
   deleteOpenById,
   listForDashboard,
-  getDashboardSummary
+  getDashboardSummary,
+  deleteById
 }

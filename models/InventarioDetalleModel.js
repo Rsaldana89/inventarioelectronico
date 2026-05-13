@@ -91,7 +91,7 @@ async function listByInventario(inventarioId, sucursalId) {
           LIMIT 1
         )
       WHERE d.inventario_id = ?
-        AND (COALESCE(e.codigo, p.codigo, NULL) IS NULL OR (COALESCE(e.codigo, p.codigo, NULL) REGEXP '^[0-9]+$' AND CAST(COALESCE(e.codigo, p.codigo, NULL) AS UNSIGNED) BETWEEN 1100000 AND 2200000))
+        AND (COALESCE(e.codigo, p.codigo, NULL) IS NULL OR (COALESCE(e.codigo, p.codigo, NULL) REGEXP '^[0-9]+$' AND CAST(COALESCE(e.codigo, p.codigo, NULL) AS UNSIGNED) BETWEEN 1101001 AND 9905007))
       ORDER BY CAST(COALESCE(e.codigo, p.codigo, '999999999') AS UNSIGNED) ASC, descripcion ASC, d.barcode ASC
     `,
     [sucursalId, inventarioId]
@@ -122,7 +122,7 @@ async function listForMobileByInventario(inventarioId, sucursalId) {
           LIMIT 1
         )
       WHERE d.inventario_id = ?
-        AND (COALESCE(e.codigo, p.codigo, NULL) IS NULL OR (COALESCE(e.codigo, p.codigo, NULL) REGEXP '^[0-9]+$' AND CAST(COALESCE(e.codigo, p.codigo, NULL) AS UNSIGNED) BETWEEN 1100000 AND 2200000))
+        AND (COALESCE(e.codigo, p.codigo, NULL) IS NULL OR (COALESCE(e.codigo, p.codigo, NULL) REGEXP '^[0-9]+$' AND CAST(COALESCE(e.codigo, p.codigo, NULL) AS UNSIGNED) BETWEEN 1101001 AND 9905007))
       ORDER BY CAST(COALESCE(e.codigo, p.codigo, '999999999') AS UNSIGNED) ASC, descripcion ASC, d.barcode ASC
     `,
     [sucursalId, inventarioId]
