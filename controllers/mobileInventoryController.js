@@ -1,5 +1,6 @@
 const InventarioModel = require('../models/InventarioModel')
 const InventarioDetalleModel = require('../models/InventarioDetalleModel')
+const { resolveBranchForApiUser, isControlRole } = require('./mobileBranchController')
 
 function toMillis(value) {
   if (!value) return null
@@ -16,33 +17,44 @@ function dateOnly(value) {
 
 function assertBranchUser(req, inventario) {
   const apiSucursalId = req.apiUser && req.apiUser.sucursal_id
-  if (!apiSucursalId) return true
+  if (!apiSucursalId || isControlRole(req.apiUser)) return true
   return Number(apiSucursalId) === Number(inventario.sucursal_id)
+}
+
+function mapInventory(row) {
+  return {
+    id: String(row.id),
+    remoteId: String(row.id),
+    externalId: row.external_id ? String(row.external_id) : null,
+    name: row.nombre || ('Inventario ' + (row.sucursal_nombre || '')).trim(),
+    branch: row.sucursal_nombre || '',
+    branchId: Number(row.sucursal_id),
+    branchCode: row.sucursal_codigo ? String(row.sucursal_codigo) : null,
+    status: row.estado,
+    createdAt: toMillis(row.created_at),
+    updatedAt: toMillis(row.updated_at),
+    fecha: dateOnly(row.fecha),
+    proformaId: row.existencia_carga_id ? Number(row.existencia_carga_id) : null,
+    proformaDate: dateOnly(row.fecha_existencia),
+    itemCount: Number(row.registros_capturados || 0),
+    totalQuantity: Number(row.unidades_capturadas || 0)
+  }
 }
 
 async function listOpenInventories(req, res, next) {
   try {
-    const sucursalId = req.apiUser && req.apiUser.sucursal_id
-    if (!sucursalId) {
-      return res.status(400).json({ error: 'No se pudo determinar la sucursal de la sesion.' })
+    const requestedBranch = req.query.branchId || req.query.branchCode || req.query.branch || ''
+    const sucursal = await resolveBranchForApiUser(req.apiUser, requestedBranch)
+
+    if (!sucursal) {
+      const message = isControlRole(req.apiUser)
+        ? 'Selecciona una sucursal para consultar inventarios abiertos.'
+        : 'No se pudo determinar la sucursal de la sesion.'
+      return res.status(400).json({ error: message })
     }
 
-    const rows = await InventarioModel.listOpenBySucursal(Number(sucursalId))
-    return res.status(200).json(rows.map(function mapInventory(row) {
-      return {
-        id: String(row.id),
-        remoteId: String(row.id),
-        externalId: row.external_id ? String(row.external_id) : null,
-        name: row.nombre || ('Inventario ' + (row.sucursal_nombre || '')).trim(),
-        branch: row.sucursal_nombre || '',
-        status: row.estado,
-        createdAt: toMillis(row.created_at),
-        updatedAt: toMillis(row.updated_at),
-        fecha: dateOnly(row.fecha),
-        itemCount: Number(row.registros_capturados || 0),
-        totalQuantity: Number(row.unidades_capturadas || 0)
-      }
-    }))
+    const rows = await InventarioModel.listOpenBySucursal(Number(sucursal.id))
+    return res.status(200).json(rows.map(mapInventory))
   } catch (error) {
     return next(error)
   }
@@ -73,10 +85,14 @@ async function getInventoryDetails(req, res, next) {
       externalId: inventario.external_id ? String(inventario.external_id) : null,
       name: inventario.nombre || ('Inventario ' + inventario.sucursal_nombre).trim(),
       branch: inventario.sucursal_nombre || '',
+      branchId: Number(inventario.sucursal_id),
+      branchCode: inventario.sucursal_codigo ? String(inventario.sucursal_codigo) : null,
       status: inventario.estado,
       createdAt: toMillis(inventario.created_at),
       updatedAt: toMillis(inventario.updated_at),
       fecha: dateOnly(inventario.fecha),
+      proformaId: inventario.existencia_carga_id ? Number(inventario.existencia_carga_id) : null,
+      proformaDate: dateOnly(inventario.fecha_existencia),
       items: items.map(function mapItem(item) {
         return {
           id: String(item.id),

@@ -1,4 +1,13 @@
 <%- include('partials/header', { title: title }) %>
+<%
+  function formatAlmacen(carga) {
+    const codigo = String(carga.sucursal_codigo || carga.sucursal_id || '').trim().padStart(3, '0');
+    const nombre = String(carga.sucursal_nombre || '').trim();
+    const etiqueta = codigo && !nombre.startsWith(codigo) ? `${codigo} - ${nombre}` : nombre;
+    const tipo = carga.sucursal_tipo === 'almacen' ? 'almacén' : 'sucursal';
+    return `${etiqueta} (${tipo})`;
+  }
+%>
 
 <section class="page-header">
   <div>
@@ -54,7 +63,7 @@
         <% (cargas || []).forEach(function eachCarga(carga) { %>
           <tr class="<%= carga.isLatest ? '' : 'old-proforma' %>" style="<%= carga.isLatest ? '' : 'display:none' %>">
             <td><%= carga.id %></td>
-            <td><%= String(carga.sucursal_id).padStart(3, '0') %> - <%= carga.sucursal_nombre %></td>
+            <td><%= formatAlmacen(carga) %></td>
             <td><%= formatDate(carga.fecha_proforma) %></td>
             <td><%= formatDateTime(carga.created_at) %></td>
             <td>

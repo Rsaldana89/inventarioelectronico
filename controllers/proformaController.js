@@ -60,12 +60,24 @@ async function showProformas(req, res, next) {
     // first occurrence of each branch is its latest proforma.
     const [rows] = await db.query(
       `
-        SELECT ec.id, ec.sucursal_id, ec.fecha_existencia AS fecha_proforma, ec.created_at,
-               s.nombre AS sucursal_nombre
+        SELECT
+          ec.id,
+          ec.sucursal_id,
+          ec.fecha_existencia AS fecha_proforma,
+          ec.created_at,
+          s.codigo AS sucursal_codigo,
+          s.tipo AS sucursal_tipo,
+          s.nombre AS sucursal_nombre
         FROM existencias_cargas ec
         INNER JOIN sucursales s ON s.id = ec.sucursal_id
-        WHERE ec.sucursal_id <= 200
-        ORDER BY ec.sucursal_id ASC, ec.fecha_existencia DESC, ec.created_at DESC, ec.id DESC
+        ORDER BY
+          CASE
+            WHEN s.codigo REGEXP '^[0-9]+$' THEN CAST(s.codigo AS UNSIGNED)
+            ELSE s.id
+          END ASC,
+          ec.fecha_existencia DESC,
+          ec.created_at DESC,
+          ec.id DESC
       `
     );
 
@@ -238,14 +250,20 @@ async function uploadProforma(req, res, next) {
     let totalLoads = 0;
     for (const sucursalId of Object.keys(grouped)) {
       const rows = grouped[sucursalId];
-      // The SAP proforma uses "Código de almacén".  Some almacenes may not
-      // exist yet in the local sucursales table, so create them automatically
-      // before inserting the proforma to satisfy the foreign key.
-      await SucursalModel.ensureById(Number(sucursalId), 'Almacen ' + sucursalId);
-      // Create a new carga record for this branch.
-      const cargaId = await ExistenciaCargaModel.create(Number(sucursalId), fechaProforma, userId);
-      // Replace existencias for this branch with the new rows.
-      await ExistenciaModel.replaceForSucursal(Number(sucursalId), rows, { cargaId });
+      const numericCodigo = Number(sucursalId);
+      const normalizedCodigo = String(sucursalId || '').trim().padStart(3, '0');
+      const tipo = numericCodigo >= 1 && numericCodigo <= 200 ? 'sucursal' : 'almacen';
+      // La proforma trae códigos de almacén. Si el código ya corresponde a una
+      // sucursal real, se reutiliza. Si no existe, se crea como almacén auxiliar
+      // para conservar sus existencias sin mezclarlo con usuarios de sucursal.
+      const sucursal = await SucursalModel.ensureByCodigo(
+        normalizedCodigo,
+        'Almacen ' + numericCodigo,
+        tipo
+      );
+      if (!sucursal || !sucursal.id) continue;
+      const cargaId = await ExistenciaCargaModel.create(Number(sucursal.id), fechaProforma, userId);
+      await ExistenciaModel.replaceForSucursal(Number(sucursal.id), rows, { cargaId });
       totalLoads += 1;
     }
 

@@ -38,8 +38,6 @@ async function createInventario(req, res, next) {
     const user = req.session.user;
     const sucursalId = isAdmin(user) ? Number(req.body.sucursal_id) : Number(user.sucursal_id);
     const fecha = String(req.body.fecha || '').trim();
-    const origenRaw = String(req.body.origen_existencias || '').trim();
-    const origenExistencias = ['con_existencia', 'con_existencias'].includes(origenRaw) ? 'con_existencia' : 'sin_existencias';
     const existenciaCargaId = req.body.existencia_carga_id ? Number(req.body.existencia_carga_id) : null;
 
     if (!sucursalId || !fecha) {
@@ -53,28 +51,35 @@ async function createInventario(req, res, next) {
       return res.redirect('/dashboard');
     }
 
-    let carga = null;
-    if (origenExistencias === 'con_existencia') {
-      if (!existenciaCargaId) {
-        setFlash(req, 'error', 'Debes seleccionar una fecha de existencia para iniciar el inventario basado en existencias.');
-        return res.redirect('/dashboard?sucursal_id=' + sucursalId);
+    const currentCarga = await ExistenciaCargaModel.getCurrentMonthBySucursal(sucursalId);
+    if (!currentCarga) {
+      setFlash(req, 'error', 'No se puede iniciar inventario porque la proforma no ha sido cargada para el mes.');
+      return res.redirect('/dashboard?sucursal_id=' + sucursalId + '#crear-inventario-panel');
+    }
+
+    let carga = currentCarga;
+    if (existenciaCargaId) {
+      const selectedCarga = await ExistenciaCargaModel.getById(existenciaCargaId);
+      if (!selectedCarga || Number(selectedCarga.sucursal_id) !== Number(sucursalId)) {
+        setFlash(req, 'error', 'La proforma seleccionada no corresponde a la sucursal.');
+        return res.redirect('/dashboard?sucursal_id=' + sucursalId + '#crear-inventario-panel');
       }
-      carga = await ExistenciaCargaModel.getById(existenciaCargaId);
-      if (!carga || Number(carga.sucursal_id) !== Number(sucursalId)) {
-        setFlash(req, 'error', 'La fecha de existencia seleccionada no corresponde a la sucursal.');
-        return res.redirect('/dashboard?sucursal_id=' + sucursalId);
+      if (!ExistenciaCargaModel.isSameYearMonth(selectedCarga.fecha_existencia)) {
+        setFlash(req, 'error', 'La proforma seleccionada no corresponde al mes actual.');
+        return res.redirect('/dashboard?sucursal_id=' + sucursalId + '#crear-inventario-panel');
       }
+      carga = selectedCarga;
     }
 
     const inventarioId = await InventarioModel.create({
       sucursalId,
       fecha,
       createdBy: user.id,
-      origenExistencias,
-      existenciaCargaId: carga ? carga.id : null
+      origenExistencias: 'con_existencia',
+      existenciaCargaId: carga.id
     });
 
-    setFlash(req, 'success', 'Inventario #' + inventarioId + ' creado correctamente.');
+    setFlash(req, 'success', 'Inventario #' + inventarioId + ' creado correctamente con base en la proforma del mes.');
     return res.redirect('/inventarios/' + inventarioId);
   } catch (error) {
     return next(error);

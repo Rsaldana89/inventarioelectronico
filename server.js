@@ -92,8 +92,12 @@ app.use(express.static(path.join(__dirname, 'public')))
 app.get('/health', function health(req, res) {
   res.status(200).json({ ok: true, status: 'ok' })
 })
+app.get('/api/health', function apiHealth(req, res) {
+  res.status(200).json({ ok: true, status: 'ok' })
+})
 
 app.use('/', mobileApiRoutes)
+app.use('/api', mobileApiRoutes)
 app.use('/', authRoutes)
 app.use('/', dashboardRoutes)
 app.use('/', existenciasRoutes)
@@ -132,10 +136,13 @@ app.use(function onError(error, req, res, next) {
 function isApiRequest(req) {
   const pathName = req.path || ''
   return (
+    pathName.startsWith('/api/') ||
     pathName === '/catalog' ||
     pathName === '/inventories/sync' ||
     pathName === '/inventories/open' ||
     pathName.startsWith('/inventories/') ||
+    pathName === '/branches' ||
+    pathName.startsWith('/branches/') ||
     pathName.startsWith('/auth/') ||
     String(req.headers.accept || '').includes('application/json')
   )

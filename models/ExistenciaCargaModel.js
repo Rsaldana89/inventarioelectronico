@@ -32,6 +32,56 @@ async function getById(id) {
   return rows[0] || null;
 }
 
+async function getCurrentMonthBySucursal(sucursalId) {
+  const [rows] = await db.execute(
+    `
+      SELECT id, sucursal_id, fecha_existencia, created_at
+      FROM existencias_cargas
+      WHERE sucursal_id = ?
+        AND fecha_existencia >= DATE_FORMAT(CURDATE(), '%Y-%m-01')
+        AND fecha_existencia < DATE_ADD(DATE_FORMAT(CURDATE(), '%Y-%m-01'), INTERVAL 1 MONTH)
+      ORDER BY fecha_existencia DESC, id DESC
+      LIMIT 1
+    `,
+    [sucursalId]
+  );
+  return rows[0] || null;
+}
+
+async function getCurrentMonthMap(sucursalIds) {
+  const ids = (sucursalIds || []).map((id) => Number(id)).filter(Boolean);
+  const map = new Map();
+  if (!ids.length) return map;
+
+  const [rows] = await db.query(
+    `
+      SELECT id, sucursal_id, fecha_existencia, created_at
+      FROM existencias_cargas
+      WHERE sucursal_id IN (?)
+        AND fecha_existencia >= DATE_FORMAT(CURDATE(), '%Y-%m-01')
+        AND fecha_existencia < DATE_ADD(DATE_FORMAT(CURDATE(), '%Y-%m-01'), INTERVAL 1 MONTH)
+      ORDER BY sucursal_id ASC, fecha_existencia DESC, id DESC
+    `,
+    [ids]
+  );
+
+  for (const row of rows || []) {
+    const key = Number(row.sucursal_id);
+    if (!map.has(key)) {
+      map.set(key, row);
+    }
+  }
+
+  return map;
+}
+
+function isSameYearMonth(value, referenceDate = new Date()) {
+  if (!value) return false;
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return false;
+  return date.getFullYear() === referenceDate.getFullYear() && date.getMonth() === referenceDate.getMonth();
+}
+
 /**
  * Delete a proforma (existencia carga) by its ID.  When a proforma is
  * deleted the database will cascade-delete associated rows in
@@ -66,5 +116,8 @@ module.exports = {
   create,
   listBySucursal,
   getById,
+  getCurrentMonthBySucursal,
+  getCurrentMonthMap,
+  isSameYearMonth,
   deleteById
 };

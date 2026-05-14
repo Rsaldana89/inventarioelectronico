@@ -202,10 +202,81 @@ async function getBlindRowsPaged(inventarioId, sucursalId, options) {
   };
 }
 
+async function listCatalogByCarga(cargaId) {
+  const [rows] = await db.execute(
+    `
+      SELECT
+        COALESCE(NULLIF(TRIM(barcode), ''), codigo) AS barcode,
+        codigo AS sku,
+        descripcion AS name
+      FROM existencias_detalle
+      WHERE carga_id = ?
+        AND ${VALID_SKU_SQL}
+      ORDER BY CAST(codigo AS UNSIGNED) ASC, descripcion ASC, barcode ASC
+    `,
+    [cargaId]
+  );
+
+  return rows.map((row) => ({
+    barcode: String(row.barcode || ''),
+    sku: String(row.sku || ''),
+    name: String(row.name || '')
+  }));
+}
+
+async function countByCargaIds(cargaIds) {
+  const ids = (cargaIds || []).map((id) => Number(id)).filter(Boolean);
+  const map = new Map();
+  if (!ids.length) return map;
+
+  const [rows] = await db.query(
+    `
+      SELECT carga_id, COUNT(*) AS total
+      FROM existencias_detalle
+      WHERE carga_id IN (?)
+        AND ${VALID_SKU_SQL}
+      GROUP BY carga_id
+    `,
+    [ids]
+  );
+
+  for (const row of rows || []) {
+    map.set(Number(row.carga_id), Number(row.total || 0));
+  }
+
+  return map;
+}
+
+async function getIdentifierLookupByCarga(cargaId) {
+  const [rows] = await db.execute(
+    `
+      SELECT codigo, barcode
+      FROM existencias_detalle
+      WHERE carga_id = ?
+        AND ${VALID_SKU_SQL}
+    `,
+    [cargaId]
+  );
+
+  const lookup = new Map();
+  for (const row of rows || []) {
+    const barcode = String(row.barcode || '').trim();
+    const codigo = String(row.codigo || '').trim();
+    const canonical = barcode || codigo;
+    if (!canonical) continue;
+    if (barcode) lookup.set(barcode, canonical);
+    if (codigo) lookup.set(codigo, canonical);
+  }
+  return lookup;
+}
+
 module.exports = {
   replaceForSucursal,
   getSummaryBySucursal,
   listPagedBySucursal,
+  listCatalogByCarga,
+  countByCargaIds,
+  getIdentifierLookupByCarga,
   getBlindSummary,
   getBlindRowsPaged
 };

@@ -4,7 +4,7 @@ function applyFilters(user, filters) {
   const conditions = ['1 = 1']
   const params = []
 
-  if (user.rol !== 'admin') {
+  if (!['admin', 'manager'].includes(user.rol)) {
     conditions.push('i.sucursal_id = ?')
     params.push(user.sucursal_id)
   } else if (filters.sucursalId) {
@@ -126,12 +126,14 @@ async function createFromMobile(data, executor) {
         nombre,
         origen
       )
-      VALUES (?, ?, 'abierto', ?, 'sin_existencias', NULL, ?, ?, ?)
+      VALUES (?, ?, 'abierto', ?, ?, ?, ?, ?, ?)
     `,
     [
       data.sucursalId,
       data.fecha,
       data.createdBy || null,
+      data.origenExistencias || 'con_existencia',
+      data.existenciaCargaId || null,
       data.externalId,
       data.nombre || null,
       data.origen || 'mobile'
@@ -151,6 +153,8 @@ async function updateFromMobile(data, executor) {
         nombre = ?,
         fecha = ?,
         created_by = COALESCE(created_by, ?),
+        origen_existencias = ?,
+        existencia_carga_id = ?,
         origen = ?,
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
@@ -160,6 +164,8 @@ async function updateFromMobile(data, executor) {
       data.nombre || null,
       data.fecha,
       data.createdBy || null,
+      data.origenExistencias || 'con_existencia',
+      data.existenciaCargaId || null,
       data.origen || 'mobile',
       data.id
     ]
@@ -185,6 +191,7 @@ async function listForDashboard(user, filters) {
         i.nombre,
         i.origen,
         ec.fecha_existencia,
+        s.codigo AS sucursal_codigo,
         s.nombre AS sucursal_nombre,
         COUNT(DISTINCT d.id) AS registros_capturados,
         COALESCE(SUM(d.cantidad), 0) AS unidades_capturadas
@@ -193,7 +200,7 @@ async function listForDashboard(user, filters) {
       LEFT JOIN existencias_cargas ec ON ec.id = i.existencia_carga_id
       LEFT JOIN inventario_detalle d ON d.inventario_id = i.id
       ${scoped.where}
-      GROUP BY i.id, i.fecha, i.created_at, i.estado, i.origen_existencias, i.existencia_carga_id, i.external_id, i.nombre, i.origen, ec.fecha_existencia, s.nombre
+      GROUP BY i.id, i.fecha, i.created_at, i.estado, i.origen_existencias, i.existencia_carga_id, i.external_id, i.nombre, i.origen, ec.fecha_existencia, s.codigo, s.nombre
       ORDER BY i.fecha DESC, i.id DESC
     `,
     scoped.params
@@ -215,14 +222,18 @@ async function listOpenBySucursal(sucursalId) {
         i.external_id,
         i.nombre,
         i.origen,
+        s.codigo AS sucursal_codigo,
         s.nombre AS sucursal_nombre,
+        i.existencia_carga_id,
+        ec.fecha_existencia,
         COUNT(DISTINCT d.id) AS registros_capturados,
         COALESCE(SUM(d.cantidad), 0) AS unidades_capturadas
       FROM inventarios i
       INNER JOIN sucursales s ON s.id = i.sucursal_id
+      LEFT JOIN existencias_cargas ec ON ec.id = i.existencia_carga_id
       LEFT JOIN inventario_detalle d ON d.inventario_id = i.id
       WHERE i.sucursal_id = ? AND i.estado = 'abierto'
-      GROUP BY i.id, i.sucursal_id, i.fecha, i.created_at, i.updated_at, i.estado, i.external_id, i.nombre, i.origen, s.nombre
+      GROUP BY i.id, i.sucursal_id, i.fecha, i.created_at, i.updated_at, i.estado, i.external_id, i.nombre, i.origen, s.codigo, s.nombre, i.existencia_carga_id, ec.fecha_existencia
       ORDER BY i.created_at DESC, i.id DESC
     `,
     [sucursalId]

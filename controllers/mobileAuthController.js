@@ -2,6 +2,10 @@ const UserModel = require('../models/UserModel')
 const SucursalModel = require('../models/SucursalModel')
 const { signToken } = require('../utils/jwt')
 
+function isControlRole(role) {
+  return ['admin', 'manager'].includes(String(role || '').toLowerCase())
+}
+
 async function login(req, res, next) {
   try {
     const username = String(req.body.username || '').trim()
@@ -20,12 +24,17 @@ async function login(req, res, next) {
 
     let sucursalId = user.sucursal_id == null ? null : Number(user.sucursal_id)
     let sucursalNombre = user.sucursal_nombre || null
+    let sucursalCodigo = user.sucursal_codigo || null
 
+    // Branch users are always bound to their assigned branch. Control users
+    // (admin/manager) may optionally send a branch code/id/name to start with a
+    // selected branch, but they can also choose it later through GET /branches.
     if (!sucursalId && branch) {
-      const resolvedSucursal = await SucursalModel.findByName(branch)
+      const resolvedSucursal = await SucursalModel.findByIdCodigoOrName(branch)
       if (resolvedSucursal) {
         sucursalId = Number(resolvedSucursal.id)
         sucursalNombre = resolvedSucursal.nombre
+        sucursalCodigo = resolvedSucursal.codigo || null
       }
     }
 
@@ -35,19 +44,19 @@ async function login(req, res, next) {
       username: user.username,
       rol: user.rol,
       sucursal_id: sucursalId,
-      sucursal_nombre: sucursalNombre
+      sucursal_nombre: sucursalNombre,
+      sucursal_codigo: sucursalCodigo
     })
 
-    // Include the user's role and resolved branch in the response.  The role allows
-    // client applications to differentiate between branch-level users and
-    // administrators/managers.  Always prefer the resolved branch name from the
-    // database (`sucursalNombre`) over the branch provided in the request.
     return res.status(200).json({
       token,
       userId: String(user.id),
       displayName: user.username,
       branch: sucursalNombre || branch || null,
-      role: user.rol
+      branchId: sucursalId,
+      branchCode: sucursalCodigo,
+      role: user.rol,
+      isControlUser: isControlRole(user.rol)
     })
   } catch (error) {
     return next(error)

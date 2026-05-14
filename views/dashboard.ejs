@@ -3,6 +3,13 @@
   const isControlRole = currentUser && ['admin', 'manager'].includes(currentUser.rol);
   const openInventario = (inventarios || []).find((item) => item.estado === 'abierto');
   const recentInventarios = (inventarios || []).slice(0, 8);
+  function formatSucursalOption(sucursal) {
+    const codigo = String(sucursal.codigo || '').trim();
+    const nombre = String(sucursal.nombre || '').trim();
+    const etiqueta = codigo && !nombre.startsWith(codigo) ? `${codigo} - ${nombre}` : nombre;
+    const tipo = sucursal.tipo === 'almacen' ? 'almacén' : 'sucursal';
+    return `${etiqueta} (${tipo})`;
+  }
 %>
 
 <% if (!isControlRole) { %>
@@ -209,10 +216,11 @@
       <form method="post" action="/inventarios" class="form-grid compact-grid">
         <% if (['admin','manager'].includes(currentUser.rol)) { %>
           <label>
-            Sucursal
-            <select name="sucursal_id" required>
+            Sucursal / almacén
+            <select name="sucursal_id" required onchange="if(this.value){ window.location = '/dashboard?sucursal_id=' + encodeURIComponent(this.value) + '#crear-inventario-panel'; }">
+              <option value="" <%= String(filters.sucursalId || '') === '' ? 'selected' : '' %>>Selecciona sucursal</option>
               <% sucursales.forEach(function eachSucursal(sucursal) { %>
-                <option value="<%= sucursal.id %>" <%= String(filters.sucursalId || '') === String(sucursal.id) ? 'selected' : '' %>><%= sucursal.nombre %></option>
+                <option value="<%= sucursal.id %>" <%= String(filters.sucursalId || '') === String(sucursal.id) ? 'selected' : '' %>><%= formatSucursalOption(sucursal) %></option>
               <% }) %>
             </select>
           </label>
@@ -226,9 +234,7 @@
         <label>
           Tipo de conteo
           <select name="origen_existencias" id="origen_existencias" data-origen-select>
-            <% var tieneProformaCtrl = (cargasExistencia || []).length > 0; %>
-            <option value="sin_existencias" <%= tieneProformaCtrl ? '' : 'selected' %>>Conteo libre</option>
-            <option value="con_existencia" <%= tieneProformaCtrl ? 'selected' : '' %>>Basado en proforma</option>
+            <option value="con_existencia" selected>Basado en proforma del mes</option>
           </select>
         </label>
 
@@ -242,9 +248,19 @@
           </select>
         </label>
 
-        <button type="submit" class="btn btn-primary"><span class="btn-icon">▶</span><span>Crear inventario</span></button>
+        <% if (filters.sucursalId && hasProformaThisMonth) { %>
+          <button type="submit" class="btn btn-primary"><span class="btn-icon">▶</span><span>Crear inventario</span></button>
+        <% } else { %>
+          <button type="button" class="btn btn-primary" disabled><span class="btn-icon">🚫</span><span>Crear inventario</span></button>
+        <% } %>
       </form>
-      <p class="muted small">La proforma solo se activa cuando el conteo es basado en proforma.</p>
+      <% if (!filters.sucursalId) { %>
+        <p class="muted small">Selecciona una sucursal para revisar si tiene proforma del mes.</p>
+      <% } else if (!hasProformaThisMonth) { %>
+        <p class="muted small">No se puede iniciar inventario porque la proforma no ha sido cargada para el mes.</p>
+      <% } else { %>
+        <p class="muted small">El inventario usará la proforma cargada para el mes actual.</p>
+      <% } %>
     </article>
 
     <article class="card section-card section-card-home" id="administracion-panel">
@@ -266,7 +282,7 @@
         </div>
         <div class="admin-info-box">
           <span class="admin-info-label">Acceso principal</span>
-          <strong><%= ['admin','manager'].includes(currentUser.rol) ? 'Todas las sucursales' : 'Operación asignada' %></strong>
+          <strong><%= ['admin','manager'].includes(currentUser.rol) ? 'Sucursales y almacenes' : 'Operación asignada' %></strong>
         </div>
       </div>
       <div class="admin-shortcuts">
@@ -295,11 +311,11 @@
     <form method="get" action="/dashboard" class="form-grid compact-grid dashboard-filter-row">
       <% if (['admin','manager'].includes(currentUser.rol)) { %>
         <label>
-          Sucursal
+          Sucursal / almacén
           <select name="sucursal_id">
-            <option value="">Todas</option>
+            <option value="">Todas las sucursales y almacenes</option>
             <% sucursales.forEach(function eachSucursal(sucursal) { %>
-              <option value="<%= sucursal.id %>" <%= String(filters.sucursalId || '') === String(sucursal.id) ? 'selected' : '' %>><%= sucursal.nombre %></option>
+              <option value="<%= sucursal.id %>" <%= String(filters.sucursalId || '') === String(sucursal.id) ? 'selected' : '' %>><%= formatSucursalOption(sucursal) %></option>
             <% }) %>
           </select>
         </label>
@@ -312,7 +328,7 @@
     <div class="table-responsive">
       <table class="data-table">
         <thead>
-          <tr><th>ID</th><th>Creado</th><th>Fecha</th><th>Sucursal</th><th>Base</th><th>Estado</th><th>Registros</th><th>Unidades</th><th>Acciones</th></tr>
+          <tr><th>ID</th><th>Creado</th><th>Fecha</th><th>Sucursal / almacén</th><th>Base</th><th>Estado</th><th>Registros</th><th>Unidades</th><th>Acciones</th></tr>
         </thead>
         <tbody>
           <% if (!inventarios.length) { %>

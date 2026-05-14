@@ -57,12 +57,31 @@ async function ensureSucursalSchema() {
     }
   }
 
+  // Agregar columna tipo si no existe
+  try {
+    await localPool.execute(
+      "ALTER TABLE sucursales ADD COLUMN tipo ENUM('sucursal','almacen') NOT NULL DEFAULT 'sucursal' AFTER codigo"
+    );
+  } catch (err) {
+    if (err && err.code !== 'ER_DUP_FIELDNAME') {
+      throw err;
+    }
+  }
+
   // Rellenar codigo de sucursales antiguas cuyos nombres comiencen con 3 dígitos
   await localPool.execute(`
     UPDATE sucursales
     SET codigo = LEFT(nombre, 3)
     WHERE (codigo IS NULL OR codigo = '')
       AND nombre REGEXP '^[0-9]{3}'
+  `);
+
+  // Marcar como almacén los registros auxiliares creados por proforma.
+  await localPool.execute(`
+    UPDATE sucursales
+    SET tipo = 'almacen'
+    WHERE nombre LIKE 'Almacen %'
+       OR (codigo REGEXP '^[0-9]+$' AND CAST(codigo AS UNSIGNED) > 200)
   `);
 
   // Crear clave única en codigo; ignorar errores por duplicados existentes
@@ -92,24 +111,32 @@ async function ensureSucursal(sucursalInfo) {
   if (!sucursalInfo) return null;
   await ensureSucursalSchema();
   const [existing] = await localPool.execute(
-    'SELECT id, nombre FROM sucursales WHERE codigo = ? ORDER BY id ASC LIMIT 1',
+    'SELECT id, nombre, tipo FROM sucursales WHERE codigo = ? ORDER BY id ASC LIMIT 1',
     [sucursalInfo.codigo]
   );
   if (existing.length > 0) {
     const row = existing[0];
-    if (row.nombre !== sucursalInfo.nombre) {
+    if (row.nombre !== sucursalInfo.nombre || row.tipo !== 'sucursal') {
       await localPool.execute(
-        'UPDATE sucursales SET nombre = ? WHERE id = ?',
+        "UPDATE sucursales SET nombre = ?, tipo = 'sucursal' WHERE id = ?",
         [sucursalInfo.nombre, row.id]
       );
     }
     return row.id;
   }
-  const [result] = await localPool.execute(
-    'INSERT INTO sucursales (codigo, nombre) VALUES (?, ?)',
-    [sucursalInfo.codigo, sucursalInfo.nombre]
+  const sucursalId = Number(sucursalInfo.codigo);
+  await localPool.execute(
+    `
+      INSERT INTO sucursales (id, codigo, tipo, nombre)
+      VALUES (?, ?, 'sucursal', ?)
+      ON DUPLICATE KEY UPDATE
+        codigo = VALUES(codigo),
+        tipo = 'sucursal',
+        nombre = VALUES(nombre)
+    `,
+    [sucursalId, sucursalInfo.codigo, sucursalInfo.nombre]
   );
-  return result.insertId;
+  return sucursalId;
 }
 
 /**

@@ -14,7 +14,8 @@ async function findByUsername(username) {
         u.password,
         u.rol,
         u.sucursal_id,
-        s.nombre AS sucursal_nombre
+        s.nombre AS sucursal_nombre,
+        s.codigo AS sucursal_codigo
       FROM usuarios u
       LEFT JOIN sucursales s ON s.id = u.sucursal_id
       WHERE u.username = ?
@@ -40,7 +41,8 @@ async function findAll() {
         u.username,
         u.rol,
         u.sucursal_id,
-        s.nombre AS sucursal_nombre
+        s.nombre AS sucursal_nombre,
+        s.codigo AS sucursal_codigo
       FROM usuarios u
       LEFT JOIN sucursales s ON s.id = u.sucursal_id
       ORDER BY u.username ASC
@@ -63,7 +65,8 @@ async function findById(id) {
         u.password,
         u.rol,
         u.sucursal_id,
-        s.nombre AS sucursal_nombre
+        s.nombre AS sucursal_nombre,
+        s.codigo AS sucursal_codigo
       FROM usuarios u
       LEFT JOIN sucursales s ON s.id = u.sucursal_id
       WHERE u.id = ?

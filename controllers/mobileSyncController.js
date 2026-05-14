@@ -2,7 +2,10 @@ const db = require('../db')
 const InventarioModel = require('../models/InventarioModel')
 const InventarioDetalleModel = require('../models/InventarioDetalleModel')
 const SucursalModel = require('../models/SucursalModel')
+const ExistenciaCargaModel = require('../models/ExistenciaCargaModel')
+const ExistenciaModel = require('../models/ExistenciaModel')
 const { cleanIdentifier, toNumber } = require('../utils/common')
+const { isControlRole } = require('./mobileBranchController')
 
 async function syncInventory(req, res, next) {
   let connection = null
@@ -18,15 +21,9 @@ async function syncInventory(req, res, next) {
       return res.status(400).json({ error: 'inventory.id es obligatorio.' })
     }
 
-    const sucursal = await resolveSucursal(req.apiUser, inventoryPayload.branch)
+    const sucursal = await resolveSucursal(req.apiUser, inventoryPayload)
     if (!sucursal) {
       return res.status(400).json({ error: 'No se pudo resolver la sucursal para esta sesion.' })
-    }
-
-    const normalizedItems = normalizeItems(itemsPayload)
-
-    if (!normalizedItems.length) {
-      return res.status(400).json({ error: 'No se recibieron partidas validas para sincronizar.' })
     }
 
     await connection.beginTransaction()
@@ -54,52 +51,69 @@ async function syncInventory(req, res, next) {
       }
     }
 
+    const carga = await resolveCargaForInventory(existing, sucursal.id)
+    if (!carga) {
+      await connection.rollback()
+      return res.status(409).json({
+        code: 'PROFORMA_REQUIRED',
+        error: 'No se puede iniciar inventario porque la proforma no ha sido cargada para el mes.'
+      })
+    }
+
+    const proformaLookup = await ExistenciaModel.getIdentifierLookupByCarga(Number(carga.id))
+    const normalizedItems = normalizeItems(itemsPayload)
+    const validation = normalizeItemsAgainstProforma(normalizedItems, proformaLookup)
+
+    if (validation.rejectedItems.length) {
+      await connection.rollback()
+      return res.status(422).json({
+        code: 'ITEMS_OUTSIDE_PROFORMA',
+        error: 'El inventario contiene productos que no pertenecen a la proforma de la sucursal.',
+        invalidItems: validation.rejectedItems.slice(0, 25)
+      })
+    }
+
+    if (!validation.detailRows.length) {
+      await connection.rollback()
+      return res.status(400).json({ error: 'No se recibieron partidas validas para sincronizar.' })
+    }
+
     const fecha = toSqlDate(inventoryPayload.createdAt)
     const safeName = buildDescriptiveInventoryName(inventoryPayload.name, sucursal.nombre, inventoryPayload.createdAt)
 
     let inventarioId = existing ? Number(existing.id) : null
 
+    const inventoryData = {
+      externalId,
+      nombre: safeName,
+      sucursalId: Number(sucursal.id),
+      fecha,
+      createdBy: req.apiUser.id,
+      origen: 'mobile',
+      origenExistencias: 'con_existencia',
+      existenciaCargaId: Number(carga.id)
+    }
+
     if (inventarioId) {
       await InventarioModel.updateFromMobile(
         {
           id: inventarioId,
-          externalId,
-          nombre: safeName,
-          sucursalId: Number(sucursal.id),
-          fecha,
-          createdBy: req.apiUser.id,
-          origen: 'mobile'
+          ...inventoryData
         },
         connection
       )
     } else {
-      inventarioId = await InventarioModel.createFromMobile(
-        {
-          externalId,
-          nombre: safeName,
-          sucursalId: Number(sucursal.id),
-          fecha,
-          createdBy: req.apiUser.id,
-          origen: 'mobile'
-        },
-        connection
-      )
+      inventarioId = await InventarioModel.createFromMobile(inventoryData, connection)
     }
 
-    const detailRows = normalizedItems.map(function mapItem(item) {
-      return {
-        barcode: item.barcode,
-        cantidad: item.quantity
-      }
-    })
-
-    await InventarioDetalleModel.bulkUpsertWithExecutor(connection, inventarioId, detailRows, 'sobrescribir')
+    await InventarioDetalleModel.bulkUpsertWithExecutor(connection, inventarioId, validation.detailRows, 'sobrescribir')
     await connection.commit()
 
     return res.status(200).json({
       remoteId: String(inventarioId),
-      acceptedItems: detailRows.length,
-      status: 'ok'
+      acceptedItems: validation.detailRows.length,
+      status: 'ok',
+      proformaId: Number(carga.id)
     })
   } catch (error) {
     if (connection) {
@@ -118,6 +132,16 @@ async function syncInventory(req, res, next) {
   }
 }
 
+async function resolveCargaForInventory(existing, sucursalId) {
+  if (existing && existing.existencia_carga_id) {
+    const carga = await ExistenciaCargaModel.getById(Number(existing.existencia_carga_id))
+    if (carga && Number(carga.sucursal_id) === Number(sucursalId)) {
+      return carga
+    }
+  }
+
+  return ExistenciaCargaModel.getCurrentMonthBySucursal(Number(sucursalId))
+}
 
 function buildDescriptiveInventoryName(providedName, branchName, createdAt) {
   const rawName = String(providedName || '').trim()
@@ -144,46 +168,87 @@ function buildDescriptiveInventoryName(providedName, branchName, createdAt) {
 }
 
 function normalizeItems(items) {
-  const byBarcode = new Map()
+  const byIdentifier = new Map()
 
   items.forEach(function eachItem(item) {
-    const barcode = cleanIdentifier(item && (item.barcode || item.sku || ''))
+    const barcode = cleanIdentifier(item && item.barcode)
+    const sku = cleanIdentifier(item && item.sku)
+    const identifier = barcode || sku
     const quantity = Math.max(toNumber(item && item.quantity), 0)
     const updatedAt = Number(item && item.updatedAt ? item.updatedAt : 0)
 
-    if (!barcode) {
+    if (!identifier) {
       return
     }
 
-    const current = byBarcode.get(barcode)
+    const current = byIdentifier.get(identifier)
     const normalized = {
       barcode,
+      sku,
+      identifier,
       quantity,
       updatedAt
     }
 
     if (!current || updatedAt >= current.updatedAt) {
-      byBarcode.set(barcode, normalized)
+      byIdentifier.set(identifier, normalized)
     }
   })
 
-  return Array.from(byBarcode.values())
+  return Array.from(byIdentifier.values())
 }
 
-async function resolveSucursal(apiUser, branch) {
-  if (apiUser && apiUser.sucursal_id) {
+function normalizeItemsAgainstProforma(items, proformaLookup) {
+  const aggregated = new Map()
+  const rejectedItems = []
+
+  for (const item of items) {
+    const matchedBarcode =
+      (item.barcode && proformaLookup.get(item.barcode)) ||
+      (item.sku && proformaLookup.get(item.sku)) ||
+      (item.identifier && proformaLookup.get(item.identifier)) ||
+      null
+
+    if (!matchedBarcode) {
+      rejectedItems.push({ barcode: item.barcode || null, sku: item.sku || null })
+      continue
+    }
+
+    const current = aggregated.get(matchedBarcode) || { barcode: matchedBarcode, cantidad: 0 }
+    current.cantidad = Number((current.cantidad + item.quantity).toFixed(2))
+    aggregated.set(matchedBarcode, current)
+  }
+
+  return {
+    detailRows: Array.from(aggregated.values()),
+    rejectedItems
+  }
+}
+
+async function resolveSucursal(apiUser, inventoryPayload) {
+  if (!apiUser) return null
+
+  if (apiUser.sucursal_id && !isControlRole(apiUser)) {
     return {
       id: Number(apiUser.sucursal_id),
-      nombre: apiUser.sucursal_nombre || String(branch || '').trim() || 'Sucursal'
+      codigo: apiUser.sucursal_codigo || null,
+      nombre: apiUser.sucursal_nombre || String(inventoryPayload.branch || '').trim() || 'Sucursal'
     }
   }
 
-  const normalizedBranch = String(branch || '').trim()
-  if (!normalizedBranch) {
+  const branchId = inventoryPayload.branchId || inventoryPayload.sucursalId || null
+  const branchCode = inventoryPayload.branchCode || inventoryPayload.sucursalCode || null
+  const branch = inventoryPayload.branch || null
+  const identifier = branchId || branchCode || branch
+
+  if (!identifier) {
+    if (apiUser.sucursal_id) {
+      return SucursalModel.getById(Number(apiUser.sucursal_id))
+    }
     return null
   }
 
-  return SucursalModel.findByName(normalizedBranch)
+  return SucursalModel.findByIdCodigoOrName(identifier)
 }
 
 function toSqlDate(value) {

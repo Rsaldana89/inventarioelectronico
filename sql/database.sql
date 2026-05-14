@@ -6,6 +6,8 @@ USE inventario_retail_one;
 
 CREATE TABLE IF NOT EXISTS sucursales (
   id INT AUTO_INCREMENT PRIMARY KEY,
+  codigo VARCHAR(10) NULL UNIQUE,
+  tipo ENUM('sucursal','almacen') NOT NULL DEFAULT 'sucursal',
   nombre VARCHAR(150) NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -14,8 +16,8 @@ CREATE TABLE IF NOT EXISTS usuarios (
   id INT AUTO_INCREMENT PRIMARY KEY,
   username VARCHAR(80) NOT NULL UNIQUE,
   password VARCHAR(255) NOT NULL,
-  -- Roles permitidos: admin, manager y user. "user" reemplaza al rol "sucursal" histórico.
-  rol ENUM('admin', 'manager', 'user') NOT NULL DEFAULT 'user',
+  -- Roles permitidos: admin, manager, sucursal y user.
+  rol ENUM('admin', 'manager', 'sucursal', 'user') NOT NULL DEFAULT 'user',
   sucursal_id INT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT fk_usuarios_sucursal
@@ -135,3 +137,11 @@ ALTER TABLE inventarios ADD COLUMN IF NOT EXISTS nombre VARCHAR(150) NULL;
 ALTER TABLE inventarios ADD COLUMN IF NOT EXISTS origen ENUM('web', 'mobile') NOT NULL DEFAULT 'web';
 -- Si el indice unico no existe en una base previa, agregalo manualmente:
 -- ALTER TABLE inventarios ADD UNIQUE KEY uk_inventarios_external_id (external_id);
+
+
+-- Migración para bases existentes:
+ALTER TABLE sucursales ADD COLUMN IF NOT EXISTS codigo VARCHAR(10) NULL AFTER id;
+ALTER TABLE sucursales ADD COLUMN IF NOT EXISTS tipo ENUM('sucursal','almacen') NOT NULL DEFAULT 'sucursal' AFTER codigo;
+ALTER TABLE usuarios MODIFY COLUMN rol ENUM('admin','manager','sucursal','user') NOT NULL DEFAULT 'user';
+-- Ejecuta manualmente si no existe el índice único:
+-- ALTER TABLE sucursales ADD UNIQUE KEY uk_sucursales_codigo (codigo);

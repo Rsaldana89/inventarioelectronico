@@ -16,7 +16,8 @@ function ensureApiAuthenticated(req, res, next) {
       username: String(payload.username || ''),
       rol: String(payload.rol || ''),
       sucursal_id: payload.sucursal_id == null ? null : Number(payload.sucursal_id),
-      sucursal_nombre: payload.sucursal_nombre || null
+      sucursal_nombre: payload.sucursal_nombre || null,
+      sucursal_codigo: payload.sucursal_codigo || null
     }
 
     if (!req.apiUser.id || !req.apiUser.username) {
