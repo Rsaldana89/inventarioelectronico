@@ -96,7 +96,10 @@ app.get('/api/health', function apiHealth(req, res) {
   res.status(200).json({ ok: true, status: 'ok' })
 })
 
-app.use('/', mobileApiRoutes)
+// Mount mobile API routes exclusively under /api.  Previously these routes were
+// available at the root path as well for backwards compatibility.  To
+// standardize the mobile API endpoints and avoid ambiguous routing, we only
+// expose them under the /api prefix.
 app.use('/api', mobileApiRoutes)
 app.use('/', authRoutes)
 app.use('/', dashboardRoutes)
@@ -136,14 +139,10 @@ app.use(function onError(error, req, res, next) {
 function isApiRequest(req) {
   const pathName = req.path || ''
   return (
+    // All mobile API requests live under /api.  Accept requests with the
+    // application/json Accept header as API requests as well.
     pathName.startsWith('/api/') ||
-    pathName === '/catalog' ||
-    pathName === '/inventories/sync' ||
-    pathName === '/inventories/open' ||
-    pathName.startsWith('/inventories/') ||
-    pathName === '/branches' ||
-    pathName.startsWith('/branches/') ||
-    pathName.startsWith('/auth/') ||
+    pathName === '/api' ||
     String(req.headers.accept || '').includes('application/json')
   )
 }

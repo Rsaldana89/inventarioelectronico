@@ -4,6 +4,7 @@ const InventarioDetalleModel = require('../models/InventarioDetalleModel')
 const SucursalModel = require('../models/SucursalModel')
 const ExistenciaCargaModel = require('../models/ExistenciaCargaModel')
 const ExistenciaModel = require('../models/ExistenciaModel')
+const ProductoModel = require('../models/ProductoModel')
 const { cleanIdentifier, toNumber } = require('../utils/common')
 const { isControlRole } = require('./mobileBranchController')
 
@@ -61,14 +62,27 @@ async function syncInventory(req, res, next) {
     }
 
     const proformaLookup = await ExistenciaModel.getIdentifierLookupByCarga(Number(carga.id))
+    // Build a lookup map of the entire product catalog to allow scanning of
+    // products outside the proforma.  The lookup maps both barcodes and
+    // códigos to a canonical identifier (prefer barcode over código).
+    const catalogMaps = await ProductoModel.getLookupMaps()
+    const catalogLookup = new Map()
+    ;['byCodigo', 'byBarcode'].forEach(function (key) {
+      const map = catalogMaps[key] || new Map()
+      map.forEach(function (value, k) {
+        const canonical = String(value.barcode || value.codigo || '').trim()
+        if (!k || !canonical) return
+        catalogLookup.set(String(k).trim(), canonical)
+      })
+    })
     const normalizedItems = normalizeItems(itemsPayload)
-    const validation = normalizeItemsAgainstProforma(normalizedItems, proformaLookup)
+    const validation = normalizeItemsAgainstProforma(normalizedItems, proformaLookup, catalogLookup)
 
     if (validation.rejectedItems.length) {
       await connection.rollback()
       return res.status(422).json({
-        code: 'ITEMS_OUTSIDE_PROFORMA',
-        error: 'El inventario contiene productos que no pertenecen a la proforma de la sucursal.',
+        code: 'ITEMS_NOT_IN_CATALOG',
+        error: 'El inventario contiene códigos que no pertenecen ni a la proforma ni al catálogo.',
         invalidItems: validation.rejectedItems.slice(0, 25)
       })
     }
@@ -198,16 +212,30 @@ function normalizeItems(items) {
   return Array.from(byIdentifier.values())
 }
 
-function normalizeItemsAgainstProforma(items, proformaLookup) {
+function normalizeItemsAgainstProforma(items, proformaLookup, catalogLookup) {
+  // Aggregates quantities by canonical barcode.  Items are accepted if they
+  // belong to the proforma (matched in proformaLookup) or if they exist in
+  // the broader product catalog (matched in catalogLookup).  Items that do
+  // not exist in either lookup are considered invalid and reported back to
+  // the caller.
   const aggregated = new Map()
   const rejectedItems = []
 
   for (const item of items) {
-    const matchedBarcode =
+    let matchedBarcode =
       (item.barcode && proformaLookup.get(item.barcode)) ||
       (item.sku && proformaLookup.get(item.sku)) ||
       (item.identifier && proformaLookup.get(item.identifier)) ||
       null
+
+    // If not found in the proforma, try to resolve against the full catalog.
+    if (!matchedBarcode && catalogLookup) {
+      matchedBarcode =
+        (item.barcode && catalogLookup.get(item.barcode)) ||
+        (item.sku && catalogLookup.get(item.sku)) ||
+        (item.identifier && catalogLookup.get(item.identifier)) ||
+        null
+    }
 
     if (!matchedBarcode) {
       rejectedItems.push({ barcode: item.barcode || null, sku: item.sku || null })

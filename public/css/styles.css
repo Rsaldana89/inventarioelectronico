@@ -1,35 +1,30 @@
 :root {
   /*
-   * Color and spacing variables for the UI.  These have been adjusted to move
-   * the overall look away from a “rounded SaaS” feel towards a more utilitarian
-   * retail application.  Borders are slightly darker for better definition,
-   * radii are smaller to reduce the bubbly appearance, and shadows are toned
-   * down to emphasise structure over floating panels.
+   * Paleta actualizada: más clara, limpia y profesional para operación de retail.
+   * Se suavizan fondos, bordes y sombras; los títulos usan azul profundo y las
+   * acciones principales un azul más amable.
    */
-  --bg: #f4f1ed;
-  --card: #fbf9f7;
-  --card-soft: #fbf9f7;
-  /* A darker border tone to subtly frame panels and tables */
-  --border: #c8bfb6;
+  --bg: #fdfdfd;
+  --card: #ffffff;
+  --card-soft: #fafafa;
+  --border: #dddddd;
   --text: #1f2937;
-  --muted: #6b7280;
-  --heading: #7a1f24;
-  --brand-title: #922a31;
-  --primary: #2563eb;
-  --primary-soft: #eaf1ff;
-  --primary-border: #cfe0ff;
-  --stock: #0f9f6e;
-  --stock-soft: #e8f8f1;
-  --stock-border: #b8e7d2;
-  --secondary: #f1ece7;
+  --muted: #767676;
+  --heading: #0a3c71;
+  --brand-title: #0a3c71;
+  --primary: #2f7bd4;
+  --primary-soft: #eef5fc;
+  --primary-border: #d7e6f7;
+  --stock: #2b8c61;
+  --stock-soft: #eaf6ef;
+  --stock-border: #c9e5d4;
+  --secondary: #f5f5f5;
   --danger: #d92d20;
   --success: #12b76a;
   --warning: #f79009;
-  /* Softer shadows for a grounded look */
-  --shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
-  --shadow-soft: 0 4px 8px rgba(0, 0, 0, 0.05);
-  /* Reduced border radius for cards and controls */
-  --radius: 6px;
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  --shadow-soft: 0 2px 4px rgba(0, 0, 0, 0.04);
+  --radius: 4px;
 }
 
 * { box-sizing: border-box; }
